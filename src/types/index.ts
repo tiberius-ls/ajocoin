@@ -60,9 +60,33 @@ export interface Contribution {
   timestamp: string
 }
 
+export interface Withdrawal {
+  id: string
+  groupId: string
+  memberAddress: string
+  amount: number
+  round?: number
+  type: 'payout' | 'vested'
+  txHash?: string
+  timestamp: string
+}
+
 export interface AppState {
   groups: AjoGroup[]
   votes: Vote[]
   vesting: VestingSchedule[]
   contributions: Contribution[]
+  withdrawals: Withdrawal[]
+}
+
+export interface InvitePayload {
+  id: string
+  name: string
+  description: string
+  contributionAmount: number
+  cycleDays: number
+  maxMembers: number
+  creatorAddress: string
+  treasuryAddress: string
+  createdAt: string
 }

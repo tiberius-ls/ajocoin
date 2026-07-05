@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Vote as VoteIcon, Plus, Check } from 'lucide-react'
+import { Vote as VoteIcon, Plus, Check, Wallet } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import EmptyState from '../components/EmptyState'
 import { formatDate } from '../lib/utils'
 
 export default function Voting() {
-  const { votes, groups, wallet, connect, connecting, castVote, createVote } = useAjo()
+  const { votes, myGroups, wallet, isConnected, connecting, connect, connectError, castVote, createVote } = useAjo()
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -14,7 +14,8 @@ export default function Voting() {
   const [optionA, setOptionA] = useState('Approve')
   const [optionB, setOptionB] = useState('Reject')
 
-  const openVotes = votes.filter(v => v.status === 'open')
+  const myGroupIds = new Set(myGroups.map(g => g.id))
+  const openVotes = votes.filter(v => v.status === 'open' && myGroupIds.has(v.groupId))
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,16 +34,19 @@ export default function Voting() {
     setShowForm(false)
   }
 
-  if (!wallet.address) {
+  if (!isConnected) {
     return (
       <EmptyState
-        icon={VoteIcon}
-        title="Connect to vote"
-        description="Link your wallet to participate in group governance."
+        icon={Wallet}
+        title="Connect your wallet"
+        description="Link your Nimiq wallet to participate in group voting."
         action={
-          <button onClick={connect} disabled={connecting} className="btn-primary">
-            {connecting ? 'Connecting…' : 'Connect Wallet'}
-          </button>
+          <div className="space-y-3">
+            <button onClick={connect} disabled={connecting} className="btn-primary">
+              {connecting ? 'Connecting…' : 'Connect Wallet'}
+            </button>
+            {connectError && <p className="text-xs text-red-400">{connectError}</p>}
+          </div>
         }
       />
     )
@@ -53,12 +57,13 @@ export default function Voting() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Voting</h2>
-          <p className="text-sm text-white/40">Group governance & decisions</p>
+          <p className="text-sm text-white/40">Decisions in your groups</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="btn-secondary !px-3 !py-2 flex items-center gap-1.5 text-sm">
-          <Plus className="w-4 h-4" />
-          New
-        </button>
+        {myGroups.length > 0 && (
+          <button onClick={() => setShowForm(!showForm)} className="btn-secondary !px-3 !py-2 flex items-center gap-1.5 text-sm">
+            <Plus className="w-4 h-4" /> New
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -70,14 +75,9 @@ export default function Voting() {
         >
           <div>
             <label className="label">Group</label>
-            <select
-              className="input-field"
-              value={groupId}
-              onChange={e => setGroupId(e.target.value)}
-              required
-            >
+            <select className="input-field" value={groupId} onChange={e => setGroupId(e.target.value)} required>
               <option value="">Select a group</option>
-              {groups.map(g => (
+              {myGroups.map(g => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>
@@ -102,12 +102,14 @@ export default function Voting() {
         <EmptyState
           icon={VoteIcon}
           title="No active votes"
-          description="When your group needs to make a decision, create a proposal here."
+          description={myGroups.length === 0
+            ? 'Join or create a group first to start voting.'
+            : 'Create a proposal when your group needs to make a decision.'}
         />
       ) : (
         <div className="space-y-4">
           {openVotes.map((vote, i) => {
-            const group = groups.find(g => g.id === vote.groupId)
+            const group = myGroups.find(g => g.id === vote.groupId)
             const totalVotes = vote.options.reduce((sum, o) => sum + o.votes.length, 0)
             const userVoted = vote.options.some(o => o.votes.includes(wallet.address!))
 
@@ -120,7 +122,7 @@ export default function Voting() {
                 className="card space-y-4"
               >
                 <div>
-                  <p className="text-[10px] text-nimiq-green font-semibold uppercase">{group?.name ?? 'Unknown group'}</p>
+                  <p className="text-[10px] text-nimiq-green font-semibold uppercase">{group?.name}</p>
                   <h3 className="font-semibold mt-1">{vote.title}</h3>
                   {vote.description && <p className="text-xs text-white/40 mt-1">{vote.description}</p>}
                   <p className="text-[10px] text-white/20 mt-2">{formatDate(vote.createdAt)} · {totalVotes} vote{totalVotes !== 1 ? 's' : ''}</p>
@@ -144,10 +146,7 @@ export default function Voting() {
                               : 'border-white/10 bg-ajo-slate hover:border-nimiq-green/30'
                         }`}
                       >
-                        <div
-                          className="absolute inset-y-0 left-0 bg-nimiq-green/10 transition-all"
-                          style={{ width: `${pct}%` }}
-                        />
+                        <div className="absolute inset-y-0 left-0 bg-nimiq-green/10 transition-all" style={{ width: `${pct}%` }} />
                         <div className="relative flex items-center justify-between">
                           <span className="text-sm font-medium flex items-center gap-2">
                             {isUserChoice && <Check className="w-3.5 h-3.5 text-nimiq-green" />}

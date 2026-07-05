@@ -1,17 +1,17 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { PlusCircle, Shield, Users, Zap, ArrowRight } from 'lucide-react'
+import { PlusCircle, Shield, Users, Zap, ArrowRight, Wallet } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import AjoCard from '../components/AjoCard'
 
 const features = [
   { icon: Users, title: 'Group Savings', desc: 'Create ajo circles with trusted members' },
   { icon: Shield, title: 'Secure Voting', desc: 'Democratic decisions on membership & rules' },
-  { icon: Zap, title: 'Nimiq Payments', desc: 'Contribute directly from your Nimiq wallet' },
+  { icon: Zap, title: 'Nimiq Payments', desc: 'Contribute and withdraw via your Nimiq wallet' },
 ]
 
 export default function Home() {
-  const { wallet, connecting, connect, groups, loadDemo } = useAjo()
+  const { isConnected, connecting, connect, connectError, myGroups } = useAjo()
 
   return (
     <div className="space-y-8">
@@ -26,24 +26,30 @@ export default function Home() {
             Save together,<br />grow together
           </h2>
           <p className="text-sm text-white/50 mb-5 max-w-xs">
-            AjoCoin brings traditional rotating savings to the Nimiq blockchain — transparent, secure, and community-driven.
+            Connect your Nimiq wallet to create groups, invite members, contribute, and withdraw — your data, your groups.
           </p>
 
-          {!wallet.address ? (
-            <button onClick={connect} disabled={connecting} className="btn-primary inline-flex items-center gap-2">
-              {connecting ? 'Connecting…' : 'Get Started'}
-              <ArrowRight className="w-4 h-4" />
-            </button>
+          {!isConnected ? (
+            <div className="space-y-3">
+              <button onClick={connect} disabled={connecting} className="btn-primary inline-flex items-center gap-2">
+                <Wallet className="w-4 h-4" />
+                {connecting ? 'Connecting…' : 'Connect Wallet'}
+              </button>
+              {connectError && (
+                <p className="text-xs text-red-400">{connectError}</p>
+              )}
+              <p className="text-[11px] text-white/30">Open in Nimiq Pay to use your wallet</p>
+            </div>
           ) : (
             <Link to="/create" className="btn-primary inline-flex items-center gap-2">
               <PlusCircle className="w-4 h-4" />
               Create New Ajo
+              <ArrowRight className="w-4 h-4" />
             </Link>
           )}
         </div>
 
         <div className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-nimiq-green/10 blur-2xl" />
-        <div className="absolute -right-2 -top-2 w-20 h-20 rounded-full bg-ajo-gold/10 blur-xl" />
       </motion.section>
 
       <section>
@@ -69,25 +75,26 @@ export default function Home() {
         </div>
       </section>
 
-      {groups.length > 0 && (
+      {isConnected && myGroups.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider">Your Groups</h3>
             <Link to="/dashboard" className="text-xs text-nimiq-green font-medium">View all</Link>
           </div>
           <div className="space-y-3">
-            {groups.slice(0, 2).map(group => (
+            {myGroups.slice(0, 2).map(group => (
               <AjoCard key={group.id} group={group} />
             ))}
           </div>
         </section>
       )}
 
-      {wallet.address && groups.length === 0 && (
-        <div className="text-center">
-          <button onClick={loadDemo} className="text-sm text-nimiq-green hover:underline">
-            Load demo data to explore
-          </button>
+      {isConnected && myGroups.length === 0 && (
+        <div className="card text-center !py-8">
+          <p className="text-sm text-white/40 mb-4">No groups yet. Create one or join via an invite link.</p>
+          <Link to="/create" className="btn-secondary inline-flex items-center gap-2 text-sm">
+            <PlusCircle className="w-4 h-4" /> Create your first group
+          </Link>
         </div>
       )}
     </div>

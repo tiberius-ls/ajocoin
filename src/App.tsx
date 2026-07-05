@@ -5,6 +5,7 @@ import Home from './pages/Home'
 import CreateAjo from './pages/CreateAjo'
 import Dashboard from './pages/Dashboard'
 import GroupDetail from './pages/GroupDetail'
+import JoinGroup from './pages/JoinGroup'
 import Voting from './pages/Voting'
 import Vesting from './pages/Vesting'
 
@@ -13,6 +14,7 @@ export default function App() {
     <AjoProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/join" element={<JoinGroup />} />
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/create" element={<CreateAjo />} />

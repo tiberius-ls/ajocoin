@@ -1,17 +1,23 @@
-import type { AppState, AjoGroup, Vote, VestingSchedule, Contribution } from '../types'
+import type { AppState, AjoGroup, InvitePayload } from '../types'
 
-const STORAGE_KEY = 'ajocoin-state'
+const REGISTRY_KEY = 'ajocoin-registry'
 
 const defaultState: AppState = {
   groups: [],
   votes: [],
   vesting: [],
   contributions: [],
+  withdrawals: [],
 }
 
-export function loadState(): AppState {
+function userKey(address: string): string {
+  return `ajocoin-${address.replace(/\s/g, '')}`
+}
+
+export function loadState(address: string | null): AppState {
+  if (!address) return { ...defaultState }
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(userKey(address))
     if (!raw) return { ...defaultState }
     return { ...defaultState, ...JSON.parse(raw) }
   } catch {
@@ -19,102 +25,68 @@ export function loadState(): AppState {
   }
 }
 
-export function saveState(state: AppState): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+export function saveState(address: string, state: AppState): void {
+  localStorage.setItem(userKey(address), JSON.stringify(state))
 }
 
-export function seedDemoData(creatorAddress: string): AppState {
-  const groupId = 'demo-group-1'
-  const now = new Date()
-  const startDate = now.toISOString()
-  const endDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
-
-  const demoGroup: AjoGroup = {
-    id: groupId,
-    name: 'Lagos Tech Ajo',
-    description: 'Monthly savings circle for tech professionals in Lagos',
-    contributionAmount: 50,
-    cycleDays: 30,
-    maxMembers: 6,
-    currentRound: 2,
-    createdAt: new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-    creatorAddress,
-    status: 'active',
-    treasuryAddress: 'NQ07 DEMO TREA SURY0 0000 0000 0000 0000',
-    members: [
-      { address: creatorAddress, name: 'You', hasContributed: true, hasReceived: false, joinedAt: startDate },
-      { address: 'NQ12 ALICE 0000 0000 0000 0000 0000', name: 'Ada', hasContributed: true, hasReceived: true, joinedAt: startDate },
-      { address: 'NQ34 BOB00 0000 0000 0000 0000 0000', name: 'Chidi', hasContributed: false, hasReceived: false, joinedAt: startDate },
-      { address: 'NQ56 CAROL 0000 0000 0000 0000 0000', name: 'Funke', hasContributed: true, hasReceived: false, joinedAt: startDate },
-    ],
+export function loadRegistry(): Record<string, AjoGroup> {
+  try {
+    const raw = localStorage.getItem(REGISTRY_KEY)
+    if (!raw) return {}
+    return JSON.parse(raw)
+  } catch {
+    return {}
   }
+}
 
-  const demoVotes: Vote[] = [
-    {
-      id: 'vote-1',
-      groupId,
-      title: 'Add new member: Emeka',
-      description: 'Emeka Okafor wants to join our savings circle. He was referred by Ada.',
-      options: [
-        { label: 'Approve', votes: [creatorAddress, 'NQ12 ALICE 0000 0000 0000 0000 0000'] },
-        { label: 'Reject', votes: [] },
-      ],
-      createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'open',
-      createdBy: 'NQ12 ALICE 0000 0000 0000 0000 0000',
-    },
-    {
-      id: 'vote-2',
-      groupId,
-      title: 'Skip Round 3 for Chidi',
-      description: 'Chidi requested a one-cycle deferral due to emergency expenses.',
-      options: [
-        { label: 'Allow skip', votes: ['NQ12 ALICE 0000 0000 0000 0000 0000'] },
-        { label: 'Deny skip', votes: [] },
-      ],
-      createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'open',
-      createdBy: creatorAddress,
-    },
-  ]
+export function saveRegistry(registry: Record<string, AjoGroup>): void {
+  localStorage.setItem(REGISTRY_KEY, JSON.stringify(registry))
+}
 
-  const demoVesting: VestingSchedule[] = [
-    {
-      id: 'vest-1',
-      groupId,
-      groupName: 'Lagos Tech Ajo',
-      memberAddress: 'NQ12 ALICE 0000 0000 0000 0000 0000',
-      memberName: 'Ada',
-      totalAmount: 250,
-      releasedAmount: 125,
-      startDate,
-      endDate,
-      cliffDays: 14,
-    },
-    {
-      id: 'vest-2',
-      groupId,
-      groupName: 'Lagos Tech Ajo',
-      memberAddress: creatorAddress,
-      memberName: 'You',
-      totalAmount: 200,
-      releasedAmount: 50,
-      startDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      endDate: new Date(now.getTime() + 120 * 24 * 60 * 60 * 1000).toISOString(),
-      cliffDays: 30,
-    },
-  ]
+export function syncGroupToRegistry(group: AjoGroup): void {
+  const registry = loadRegistry()
+  registry[group.id] = group
+  saveRegistry(registry)
+}
 
-  const demoContributions: Contribution[] = [
-    { id: 'c1', groupId, memberAddress: creatorAddress, amount: 50, round: 1, timestamp: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 'c2', groupId, memberAddress: 'NQ12 ALICE 0000 0000 0000 0000 0000', amount: 50, round: 1, timestamp: new Date(now.getTime() - 44 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 'c3', groupId, memberAddress: creatorAddress, amount: 50, round: 2, txHash: 'demo-tx-hash', timestamp: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString() },
-  ]
+export function getGroupFromRegistry(groupId: string): AjoGroup | null {
+  return loadRegistry()[groupId] ?? null
+}
 
+export function buildInviteUrl(group: AjoGroup): string {
+  const payload: InvitePayload = {
+    id: group.id,
+    name: group.name,
+    description: group.description,
+    contributionAmount: group.contributionAmount,
+    cycleDays: group.cycleDays,
+    maxMembers: group.maxMembers,
+    creatorAddress: group.creatorAddress,
+    treasuryAddress: group.treasuryAddress,
+    createdAt: group.createdAt,
+  }
+  const encoded = btoa(JSON.stringify(payload))
+  return `${window.location.origin}/join?invite=${encoded}`
+}
+
+export function parseInviteParam(invite: string): InvitePayload | null {
+  try {
+    const json = atob(invite)
+    return JSON.parse(json) as InvitePayload
+  } catch {
+    return null
+  }
+}
+
+export function inviteToGroup(payload: InvitePayload, members: AjoGroup['members'] = []): AjoGroup {
   return {
-    groups: [demoGroup],
-    votes: demoVotes,
-    vesting: demoVesting,
-    contributions: demoContributions,
+    ...payload,
+    members,
+    currentRound: 1,
+    status: 'active',
   }
+}
+
+export function clearUserData(address: string): void {
+  localStorage.removeItem(userKey(address))
 }

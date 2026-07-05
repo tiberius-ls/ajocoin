@@ -1,30 +1,35 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { PlusCircle, Users } from 'lucide-react'
+import { PlusCircle, Users, Wallet } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import AjoCard from '../components/AjoCard'
 import EmptyState from '../components/EmptyState'
 import { formatNim } from '../lib/utils'
 
 export default function Dashboard() {
-  const { groups, contributions, wallet, connect, connecting } = useAjo()
+  const { isConnected, connecting, connect, connectError, myGroups, contributions, withdrawals, wallet } = useAjo()
 
   const totalContributed = contributions
     .filter(c => c.memberAddress === wallet.address)
     .reduce((sum, c) => sum + c.amount, 0)
 
-  const activeGroups = groups.filter(g => g.status === 'active').length
+  const totalWithdrawn = withdrawals
+    .filter(w => w.memberAddress === wallet.address)
+    .reduce((sum, w) => sum + w.amount, 0)
 
-  if (!wallet.address) {
+  if (!isConnected) {
     return (
       <EmptyState
-        icon={Users}
-        title="Connect to view groups"
+        icon={Wallet}
+        title="Connect your wallet"
         description="Link your Nimiq wallet to see and manage your ajo groups."
         action={
-          <button onClick={connect} disabled={connecting} className="btn-primary">
-            {connecting ? 'Connecting…' : 'Connect Wallet'}
-          </button>
+          <div className="space-y-3">
+            <button onClick={connect} disabled={connecting} className="btn-primary">
+              {connecting ? 'Connecting…' : 'Connect Wallet'}
+            </button>
+            {connectError && <p className="text-xs text-red-400">{connectError}</p>}
+          </div>
         }
       />
     )
@@ -34,14 +39,14 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold">My Groups</h2>
-        <p className="text-sm text-white/40">Manage your savings circles</p>
+        <p className="text-sm text-white/40">Groups you've created or joined</p>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Active', value: activeGroups },
-          { label: 'Total', value: groups.length },
+          { label: 'Groups', value: myGroups.length },
           { label: 'Contributed', value: formatNim(totalContributed) },
+          { label: 'Withdrawn', value: formatNim(totalWithdrawn) },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -56,11 +61,11 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {groups.length === 0 ? (
+      {myGroups.length === 0 ? (
         <EmptyState
           icon={Users}
           title="No groups yet"
-          description="Create your first ajo group or join an existing one."
+          description="Create your first ajo group or ask a friend to share their invite link."
           action={
             <Link to="/create" className="btn-primary inline-flex items-center gap-2">
               <PlusCircle className="w-4 h-4" />
@@ -70,7 +75,7 @@ export default function Dashboard() {
         />
       ) : (
         <div className="space-y-3">
-          {groups.map((group, i) => (
+          {myGroups.map((group, i) => (
             <motion.div
               key={group.id}
               initial={{ opacity: 0, y: 8 }}

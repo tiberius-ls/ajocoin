@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, LayoutDashboard, Vote, Lock, Wallet } from 'lucide-react'
+import { Home, PlusCircle, LayoutDashboard, Vote, Lock, Wallet, LogOut } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import { shortenAddress } from '../lib/utils'
 
@@ -12,7 +12,7 @@ const navItems = [
 ]
 
 export default function Layout() {
-  const { wallet, connecting, connect } = useAjo()
+  const { wallet, connecting, connect, disconnect, isConnected } = useAjo()
 
   return (
     <div className="flex flex-col min-h-dvh max-w-lg mx-auto">
@@ -28,27 +28,31 @@ export default function Layout() {
             </div>
           </div>
 
-          <button
-            onClick={connect}
-            disabled={connecting || wallet.status === 'connected' || wallet.status === 'demo'}
-            className="flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-xl bg-ajo-card border border-white/10 hover:border-nimiq-green/30 transition-colors disabled:opacity-70"
-          >
-            <Wallet className="w-3.5 h-3.5 text-nimiq-green" />
-            {connecting ? (
-              <span className="text-white/60">Connecting…</span>
-            ) : wallet.address ? (
-              <span>{shortenAddress(wallet.address)}</span>
-            ) : (
-              <span className="text-nimiq-green">Connect</span>
-            )}
-          </button>
+          {isConnected ? (
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-xl bg-ajo-card border border-nimiq-green/20">
+                <Wallet className="w-3.5 h-3.5 text-nimiq-green" />
+                <span>{shortenAddress(wallet.address!)}</span>
+              </div>
+              <button
+                onClick={disconnect}
+                className="p-2 rounded-xl bg-ajo-card border border-white/10 hover:border-red-400/30 transition-colors"
+                title="Disconnect"
+              >
+                <LogOut className="w-3.5 h-3.5 text-white/40" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={connect}
+              disabled={connecting}
+              className="flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-xl bg-ajo-card border border-white/10 hover:border-nimiq-green/30 transition-colors"
+            >
+              <Wallet className="w-3.5 h-3.5 text-nimiq-green" />
+              {connecting ? 'Connecting…' : 'Connect'}
+            </button>
+          )}
         </div>
-
-        {wallet.status === 'demo' && (
-          <div className="mt-2 text-[11px] text-ajo-gold/80 bg-ajo-gold/10 rounded-lg px-3 py-1.5 text-center">
-            Demo mode — open in Nimiq Pay for live transactions
-          </div>
-        )}
       </header>
 
       <main className="flex-1 px-4 py-5 pb-24 animate-fade-in">
