@@ -1,0 +1,68 @@
+export interface AjoMember {
+  address: string
+  name: string
+  hasContributed: boolean
+  hasReceived: boolean
+  joinedAt: string
+}
+
+export interface AjoGroup {
+  id: string
+  name: string
+  description: string
+  contributionAmount: number
+  cycleDays: number
+  maxMembers: number
+  members: AjoMember[]
+  currentRound: number
+  createdAt: string
+  creatorAddress: string
+  status: 'active' | 'completed' | 'pending'
+  treasuryAddress: string
+}
+
+export interface VoteOption {
+  label: string
+  votes: string[]
+}
+
+export interface Vote {
+  id: string
+  groupId: string
+  title: string
+  description: string
+  options: VoteOption[]
+  createdAt: string
+  status: 'open' | 'closed'
+  createdBy: string
+}
+
+export interface VestingSchedule {
+  id: string
+  groupId: string
+  groupName: string
+  memberAddress: string
+  memberName: string
+  totalAmount: number
+  releasedAmount: number
+  startDate: string
+  endDate: string
+  cliffDays: number
+}
+
+export interface Contribution {
+  id: string
+  groupId: string
+  memberAddress: string
+  amount: number
+  round: number
+  txHash?: string
+  timestamp: string
+}
+
+export interface AppState {
+  groups: AjoGroup[]
+  votes: Vote[]
+  vesting: VestingSchedule[]
+  contributions: Contribution[]
+}

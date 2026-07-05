@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-ajo-navy text-white font-sans antialiased;
+    min-height: 100dvh;
+  }
+
+  #root {
+    min-height: 100dvh;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-nimiq-green hover:bg-nimiq-green-dark text-white font-semibold
+           px-5 py-3 rounded-xl transition-all duration-200
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-ajo-card hover:bg-ajo-slate text-white font-medium
+           px-5 py-3 rounded-xl border border-white/10 transition-all duration-200
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-gold {
+    @apply bg-ajo-gold hover:bg-ajo-gold-dark text-ajo-navy font-semibold
+           px-5 py-3 rounded-xl transition-all duration-200
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .card {
+    @apply bg-ajo-card rounded-2xl border border-white/5 p-5;
+  }
+
+  .input-field {
+    @apply w-full bg-ajo-slate border border-white/10 rounded-xl px-4 py-3
+           text-white placeholder:text-white/40 focus:outline-none focus:border-nimiq-green/50
+           transition-colors;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-white/70 mb-1.5;
+  }
+}
