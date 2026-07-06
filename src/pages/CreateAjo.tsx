@@ -56,7 +56,7 @@ export default function CreateAjo() {
     }
 
     setSubmitting(true)
-    createGroup({
+    const result = createGroup({
       name: name.trim(),
       description: description.trim(),
       contributionMode: mode,
@@ -69,10 +69,12 @@ export default function CreateAjo() {
       treasuryAddress: wallet.address!,
     }, creatorSaved)
 
-    setTimeout(() => {
-      setSubmitting(false)
+    setSubmitting(false)
+    if (result.success) {
       navigate('/dashboard')
-    }, 300)
+    } else {
+      setFormError(result.error ?? 'Failed to create group')
+    }
   }
 
   if (!isConnected) {

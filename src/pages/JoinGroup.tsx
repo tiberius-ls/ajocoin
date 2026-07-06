@@ -101,8 +101,9 @@ export default function JoinGroup() {
                 max={invite.maxContribution}
                 step="0.01"
                 placeholder={`${invite.minContribution} – ${invite.maxContribution}`}
-                value={savedAmount || defaultAmount}
+                value={savedAmount}
                 onChange={e => setSavedAmount(e.target.value)}
+                onFocus={() => { if (!savedAmount) setSavedAmount(defaultAmount) }}
               />
               <p className="text-[11px] text-white/30 mt-1">
                 Choose between {formatNim(invite.minContribution)} and {formatNim(invite.maxContribution)}

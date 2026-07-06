@@ -1,4 +1,5 @@
 import type { AppState, AjoGroup, InvitePayload, TurnAlert, GroupActivity, Contribution, Withdrawal } from '../types'
+import { normalizeGroup, mergeTwoGroups } from './utils'
 
 const REGISTRY_KEY = 'ajocoin-registry'
 const ALERTS_KEY = 'ajocoin-alerts'
@@ -60,6 +61,15 @@ export function removeGroupFromRegistry(groupId: string): void {
 
 export function getGroupFromRegistry(groupId: string): AjoGroup | null {
   return loadRegistry()[groupId] ?? null
+}
+
+export function resolveGroup(groupId: string, localGroups: AjoGroup[]): AjoGroup | undefined {
+  const local = localGroups.find(g => g.id === groupId)
+  const registry = getGroupFromRegistry(groupId)
+  if (!local && !registry) return undefined
+  if (!local) return normalizeGroup(registry!)
+  if (!registry) return normalizeGroup(local)
+  return mergeTwoGroups(local, registry)
 }
 
 export function loadGlobalAlerts(): TurnAlert[] {

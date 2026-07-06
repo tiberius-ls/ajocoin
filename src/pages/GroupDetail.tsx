@@ -112,7 +112,11 @@ export default function GroupDetail() {
 
   const handleJoin = () => {
     setError('')
-    const amount = flexible ? parseFloat(joinAmount || String(group.contributionAmount)) : undefined
+    const amount = flexible ? parseFloat(joinAmount || String(group.minContribution)) : undefined
+    if (flexible && !Number.isFinite(amount)) {
+      setError('Enter a valid savings amount')
+      return
+    }
     const result = joinGroup(group.id, joinName.trim(), amount)
     if (result.success) {
       setMessage('You joined the group!')
@@ -124,7 +128,11 @@ export default function GroupDetail() {
 
   const handleAddMember = () => {
     setError('')
-    const amount = flexible ? parseFloat(memberAmount || String(group.contributionAmount)) : undefined
+    const amount = flexible ? parseFloat(memberAmount || String(group.minContribution)) : undefined
+    if (flexible && !Number.isFinite(amount)) {
+      setError('Enter a valid savings amount for the member')
+      return
+    }
     const result = addMember(group.id, memberName, memberAddress, amount)
     if (result.success) {
       setMessage(`Added ${memberName} to the group`)

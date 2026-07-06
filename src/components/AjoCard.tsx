@@ -9,7 +9,9 @@ interface AjoCardProps {
 
 export default function AjoCard({ group }: AjoCardProps) {
   const contributed = group.members.filter(m => m.hasContributed).length
-  const progress = Math.round((contributed / group.members.length) * 100)
+  const progress = group.members.length > 0
+    ? Math.round((contributed / group.members.length) * 100)
+    : 0
 
   return (
     <Link to={`/group/${group.id}`} className="card block hover:border-nimiq-green/20 transition-colors group">

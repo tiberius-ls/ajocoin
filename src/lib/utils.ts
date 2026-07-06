@@ -75,10 +75,49 @@ export function getMemberAmount(group: AjoGroup, member: AjoMember): number {
 }
 
 export function validateMemberAmount(group: AjoGroup, amount: number): string | null {
+  if (!Number.isFinite(amount) || amount <= 0) return 'Enter a valid amount'
   const g = normalizeGroup(group)
   if (amount < g.minContribution) return `Minimum is ${formatNim(g.minContribution)}`
   if (amount > g.maxContribution) return `Maximum is ${formatNim(g.maxContribution)}`
   return null
+}
+
+function mergeMembers(a: AjoMember[], b: AjoMember[]): AjoMember[] {
+  const map = new Map<string, AjoMember>()
+  for (const m of [...a, ...b]) {
+    const existing = map.get(m.address)
+    if (!existing) {
+      map.set(m.address, m)
+      continue
+    }
+    map.set(m.address, {
+      ...existing,
+      name: m.name || existing.name,
+      savedAmount: m.savedAmount ?? existing.savedAmount,
+      hasContributed: existing.hasContributed || m.hasContributed,
+      hasReceived: existing.hasReceived || m.hasReceived,
+      joinedAt: existing.joinedAt < m.joinedAt ? existing.joinedAt : m.joinedAt,
+    })
+  }
+  return Array.from(map.values())
+}
+
+/** Merge local and registry copies — registry wins on round/member count */
+export function mergeTwoGroups(local: AjoGroup, registry: AjoGroup): AjoGroup {
+  const l = normalizeGroup(local)
+  const r = normalizeGroup(registry)
+  const useRegistry =
+    r.members.length > l.members.length ||
+    r.currentRound > l.currentRound ||
+    (r.members.length === l.members.length && r.status === 'completed')
+
+  const base = useRegistry ? r : l
+  return normalizeGroup({
+    ...base,
+    members: mergeMembers(r.members, l.members),
+    currentRound: Math.max(l.currentRound, r.currentRound),
+    status: l.status === 'completed' || r.status === 'completed' ? 'completed' : base.status,
+  })
 }
 
 export function vestingProgress(schedule: {
