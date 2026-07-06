@@ -9,7 +9,8 @@ import { useAjo } from '../context/AjoContext'
 import {
   formatNim, shortenAddress, formatDate, getTreasuryBalance,
   getCurrentRecipient, allMembersContributed, isGroupCreator,
-  isTreasuryHolder, getPayoutAmount, shareLink,
+  isTreasuryHolder, getRoundPayout, shareLink, formatSavingsLabel,
+  formatCycleLabel, getMemberAmount, isFlexibleGroup,
 } from '../lib/utils'
 
 export default function GroupDetail() {
@@ -28,6 +29,8 @@ export default function GroupDetail() {
   const [joinName, setJoinName] = useState('')
   const [memberName, setMemberName] = useState('')
   const [memberAddress, setMemberAddress] = useState('')
+  const [memberAmount, setMemberAmount] = useState('')
+  const [joinAmount, setJoinAmount] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [shareStatus, setShareStatus] = useState('')
@@ -65,7 +68,9 @@ export default function GroupDetail() {
   const groupWithdrawals = getGroupWithdrawals(group.id)
   const treasuryBalance = getTreasuryBalance(group.id, groupContributions, groupWithdrawals)
   const recipient = getCurrentRecipient(group)
-  const payoutAmount = getPayoutAmount(group)
+  const payoutAmount = getRoundPayout(group, groupContributions, group.currentRound)
+  const myAmount = currentMember ? getMemberAmount(group, currentMember) : 0
+  const flexible = isFlexibleGroup(group)
   const allContributed = allMembersContributed(group)
   const isRecipient = recipient?.address === wallet.address
   const canReleasePayout = isTreasurer && allContributed && recipient && treasuryBalance >= payoutAmount
@@ -107,7 +112,8 @@ export default function GroupDetail() {
 
   const handleJoin = () => {
     setError('')
-    const result = joinGroup(group.id, joinName.trim())
+    const amount = flexible ? parseFloat(joinAmount || String(group.contributionAmount)) : undefined
+    const result = joinGroup(group.id, joinName.trim(), amount)
     if (result.success) {
       setMessage('You joined the group!')
       setJoinName('')
@@ -118,7 +124,8 @@ export default function GroupDetail() {
 
   const handleAddMember = () => {
     setError('')
-    const result = addMember(group.id, memberName, memberAddress)
+    const amount = flexible ? parseFloat(memberAmount || String(group.contributionAmount)) : undefined
+    const result = addMember(group.id, memberName, memberAddress, amount)
     if (result.success) {
       setMessage(`Added ${memberName} to the group`)
       setMemberName('')
@@ -162,10 +169,14 @@ export default function GroupDetail() {
         </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <div className="card !p-3">
-          <p className="text-[10px] text-white/40 uppercase">Per Cycle</p>
-          <p className="text-base font-bold text-ajo-gold">{formatNim(group.contributionAmount)}</p>
+          <p className="text-[10px] text-white/40 uppercase">{flexible ? 'Savings range' : 'Per cycle'}</p>
+          <p className="text-base font-bold text-ajo-gold">{formatSavingsLabel(group)}</p>
+        </div>
+        <div className="card !p-3">
+          <p className="text-[10px] text-white/40 uppercase">Cycle</p>
+          <p className="text-base font-bold">{formatCycleLabel(group.cycleDays)}</p>
         </div>
         <div className="card !p-3">
           <p className="text-[10px] text-white/40 uppercase">Members</p>
@@ -176,6 +187,13 @@ export default function GroupDetail() {
           <p className="text-base font-bold">{formatNim(treasuryBalance)}</p>
         </div>
       </div>
+
+      {isMember && currentMember && (
+        <div className="card !p-3 bg-nimiq-green/5 border-nimiq-green/10">
+          <p className="text-[10px] text-white/40 uppercase">Your savings per cycle</p>
+          <p className="text-lg font-bold text-nimiq-green">{formatNim(myAmount)}</p>
+        </div>
+      )}
 
       {isMember && recipient && group.status === 'active' && (
         <div className={`card !p-3 flex items-center justify-between ${
@@ -216,7 +234,7 @@ export default function GroupDetail() {
       {isMember && currentMember && !currentMember.hasContributed && group.status === 'active' && (
         <button onClick={handleContribute} disabled={contributing} className="btn-gold w-full flex items-center justify-center gap-2">
           <Send className="w-4 h-4" />
-          {contributing ? 'Sending…' : `Contribute ${formatNim(group.contributionAmount)}`}
+          {contributing ? 'Sending…' : `Contribute ${formatNim(myAmount)}`}
         </button>
       )}
 
@@ -256,6 +274,21 @@ export default function GroupDetail() {
             <UserPlus className="w-4 h-4 text-nimiq-green" /> Join this group
           </p>
           <input className="input-field" placeholder="Your display name" value={joinName} onChange={e => setJoinName(e.target.value)} />
+          {flexible && (
+            <div>
+              <label className="label">Your savings per cycle (NIM)</label>
+              <input
+                className="input-field"
+                type="number"
+                min={group.minContribution}
+                max={group.maxContribution}
+                step="0.01"
+                placeholder={`${group.minContribution} – ${group.maxContribution}`}
+                value={joinAmount}
+                onChange={e => setJoinAmount(e.target.value)}
+              />
+            </div>
+          )}
           <button onClick={handleJoin} disabled={!joinName.trim()} className="btn-primary w-full">Join Group</button>
         </div>
       )}
@@ -267,6 +300,21 @@ export default function GroupDetail() {
           </p>
           <input className="input-field" placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
           <input className="input-field" placeholder="Nimiq address" value={memberAddress} onChange={e => setMemberAddress(e.target.value)} />
+          {flexible && (
+            <div>
+              <label className="label">Their savings per cycle (NIM)</label>
+              <input
+                className="input-field"
+                type="number"
+                min={group.minContribution}
+                max={group.maxContribution}
+                step="0.01"
+                placeholder={`${group.minContribution} – ${group.maxContribution}`}
+                value={memberAmount}
+                onChange={e => setMemberAmount(e.target.value)}
+              />
+            </div>
+          )}
           <button onClick={handleAddMember} disabled={!memberName.trim() || !memberAddress.trim()} className="btn-secondary w-full">
             Add Member
           </button>
@@ -315,7 +363,9 @@ export default function GroupDetail() {
                       <span className="text-[10px] text-nimiq-green ml-1.5">#{idx + 1} in line</span>
                     )}
                   </p>
-                  <p className="text-[10px] text-white/30">{shortenAddress(member.address)}</p>
+                  <p className="text-[10px] text-white/30">
+                    {shortenAddress(member.address)} · {formatNim(getMemberAmount(group, member))}/cycle
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">

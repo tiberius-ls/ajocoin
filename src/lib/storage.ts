@@ -146,7 +146,10 @@ export function buildInviteUrl(group: AjoGroup): string {
     id: group.id,
     name: group.name,
     description: group.description,
+    contributionMode: group.contributionMode ?? 'fixed',
     contributionAmount: group.contributionAmount,
+    minContribution: group.minContribution ?? group.contributionAmount,
+    maxContribution: group.maxContribution ?? group.contributionAmount,
     cycleDays: group.cycleDays,
     maxMembers: group.maxMembers,
     creatorAddress: group.creatorAddress,
@@ -169,6 +172,9 @@ export function parseInviteParam(invite: string): InvitePayload | null {
 export function inviteToGroup(payload: InvitePayload, members: AjoGroup['members'] = []): AjoGroup {
   return {
     ...payload,
+    contributionMode: payload.contributionMode ?? 'fixed',
+    minContribution: payload.minContribution ?? payload.contributionAmount,
+    maxContribution: payload.maxContribution ?? payload.contributionAmount,
     members,
     currentRound: 1,
     status: 'active',

@@ -1,6 +1,9 @@
+export type ContributionMode = 'fixed' | 'flexible'
+
 export interface AjoMember {
   address: string
   name: string
+  savedAmount: number
   hasContributed: boolean
   hasReceived: boolean
   joinedAt: string
@@ -10,7 +13,10 @@ export interface AjoGroup {
   id: string
   name: string
   description: string
+  contributionMode: ContributionMode
   contributionAmount: number
+  minContribution: number
+  maxContribution: number
   cycleDays: number
   maxMembers: number
   members: AjoMember[]
@@ -104,7 +110,10 @@ export interface InvitePayload {
   id: string
   name: string
   description: string
+  contributionMode: ContributionMode
   contributionAmount: number
+  minContribution: number
+  maxContribution: number
   cycleDays: number
   maxMembers: number
   creatorAddress: string

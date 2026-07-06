@@ -10,8 +10,8 @@ import {
 import { connectWallet, sendTransaction, disconnectWallet, type WalletState } from '../lib/nimiq'
 import {
   generateId, getTreasuryBalance, getCurrentRecipient, getNextRecipient,
-  allMembersContributed, vestingProgress, daysBetween, getPayoutAmount,
-  isTreasuryHolder,
+  allMembersContributed, vestingProgress, daysBetween, getRoundPayout,
+  isTreasuryHolder, normalizeGroup, getMemberAmount, validateMemberAmount, formatNim,
 } from '../lib/utils'
 
 interface AjoContextValue {
@@ -27,10 +27,13 @@ interface AjoContextValue {
   vesting: VestingSchedule[]
   contributions: Contribution[]
   withdrawals: Withdrawal[]
-  createGroup: (group: Omit<AjoGroup, 'id' | 'createdAt' | 'currentRound' | 'status' | 'members'>) => void
-  addMember: (groupId: string, name: string, address: string) => { success: boolean; error?: string }
-  joinGroup: (groupId: string, memberName: string) => { success: boolean; error?: string }
-  joinFromInvite: (inviteParam: string, memberName: string) => { success: boolean; error?: string }
+  createGroup: (
+    group: Omit<AjoGroup, 'id' | 'createdAt' | 'currentRound' | 'status' | 'members'>,
+    creatorSavedAmount?: number
+  ) => void
+  addMember: (groupId: string, name: string, address: string, savedAmount?: number) => { success: boolean; error?: string }
+  joinGroup: (groupId: string, memberName: string, savedAmount?: number) => { success: boolean; error?: string }
+  joinFromInvite: (inviteParam: string, memberName: string, savedAmount?: number) => { success: boolean; error?: string }
   getInviteLink: (groupId: string) => string | null
   contribute: (groupId: string) => Promise<{ success: boolean; error?: string }>
   withdrawPayout: (groupId: string) => Promise<{ success: boolean; error?: string; nextRecipient?: string }>
@@ -55,10 +58,11 @@ const defaultWallet: WalletState = {
 const AjoContext = createContext<AjoContextValue | null>(null)
 
 function persistGroup(group: AjoGroup, setGroups: React.Dispatch<React.SetStateAction<AjoGroup[]>>) {
-  syncGroupToRegistry(group)
+  const normalized = normalizeGroup(group)
+  syncGroupToRegistry(normalized)
   setGroups(prev => {
-    const exists = prev.some(g => g.id === group.id)
-    return exists ? prev.map(g => g.id === group.id ? group : g) : [...prev, group]
+    const exists = prev.some(g => g.id === normalized.id)
+    return exists ? prev.map(g => g.id === normalized.id ? normalized : g) : [...prev, normalized]
   })
 }
 
@@ -188,8 +192,26 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     return Array.from(map.values())
   }, [withdrawals])
 
-  const createGroup = useCallback((data: Omit<AjoGroup, 'id' | 'createdAt' | 'currentRound' | 'status' | 'members'>) => {
+  const createGroup = useCallback((
+    data: Omit<AjoGroup, 'id' | 'createdAt' | 'currentRound' | 'status' | 'members'>,
+    creatorSavedAmount?: number
+  ) => {
     if (!wallet.address) return
+
+    const creatorAmount = data.contributionMode === 'flexible'
+      ? (creatorSavedAmount ?? data.contributionAmount)
+      : data.contributionAmount
+
+    const draftGroup = normalizeGroup({
+      ...data,
+      id: '',
+      createdAt: '',
+      currentRound: 1,
+      status: 'active',
+      members: [],
+    } as AjoGroup)
+    const amountError = validateMemberAmount(draftGroup, creatorAmount)
+    if (amountError) return
 
     const group: AjoGroup = {
       ...data,
@@ -200,6 +222,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       members: [{
         address: wallet.address,
         name: 'You',
+        savedAmount: creatorAmount,
         hasContributed: false,
         hasReceived: false,
         joinedAt: new Date().toISOString(),
@@ -209,22 +232,30 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     persistGroup(group, setGroups)
   }, [wallet.address])
 
-  const addMember = useCallback((groupId: string, name: string, address: string): { success: boolean; error?: string } => {
+  const addMember = useCallback((
+    groupId: string, name: string, address: string, savedAmount?: number
+  ): { success: boolean; error?: string } => {
     if (!wallet.address) return { success: false, error: 'Connect your wallet first' }
 
-    const group = groups.find(g => g.id === groupId) ?? getGroupFromRegistry(groupId)
-    if (!group) return { success: false, error: 'Group not found' }
+    const raw = groups.find(g => g.id === groupId) ?? getGroupFromRegistry(groupId)
+    if (!raw) return { success: false, error: 'Group not found' }
+    const group = normalizeGroup(raw)
     if (group.creatorAddress !== wallet.address) return { success: false, error: 'Only the creator can add members' }
     if (group.members.length >= group.maxMembers) return { success: false, error: 'Group is full' }
     if (group.members.some(m => m.address === address.trim())) return { success: false, error: 'Member already exists' }
     if (!name.trim()) return { success: false, error: 'Name is required' }
     if (!address.trim()) return { success: false, error: 'Address is required' }
 
+    const amount = savedAmount ?? group.contributionAmount
+    const amountError = validateMemberAmount(group, amount)
+    if (amountError) return { success: false, error: amountError }
+
     const updated: AjoGroup = {
       ...group,
       members: [...group.members, {
         address: address.trim(),
         name: name.trim(),
+        savedAmount: amount,
         hasContributed: false,
         hasReceived: false,
         joinedAt: new Date().toISOString(),
@@ -235,20 +266,28 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     return { success: true }
   }, [wallet.address, groups])
 
-  const joinGroup = useCallback((groupId: string, memberName: string): { success: boolean; error?: string } => {
+  const joinGroup = useCallback((
+    groupId: string, memberName: string, savedAmount?: number
+  ): { success: boolean; error?: string } => {
     if (!wallet.address) return { success: false, error: 'Connect your wallet first' }
     if (!memberName.trim()) return { success: false, error: 'Enter your display name' }
 
-    const group = groups.find(g => g.id === groupId) ?? getGroupFromRegistry(groupId)
-    if (!group) return { success: false, error: 'Group not found' }
+    const raw = groups.find(g => g.id === groupId) ?? getGroupFromRegistry(groupId)
+    if (!raw) return { success: false, error: 'Group not found' }
+    const group = normalizeGroup(raw)
     if (group.members.length >= group.maxMembers) return { success: false, error: 'Group is full' }
     if (group.members.some(m => m.address === wallet.address)) return { success: false, error: 'You are already a member' }
+
+    const amount = savedAmount ?? group.contributionAmount
+    const amountError = validateMemberAmount(group, amount)
+    if (amountError) return { success: false, error: amountError }
 
     const updated: AjoGroup = {
       ...group,
       members: [...group.members, {
         address: wallet.address,
         name: memberName.trim(),
+        savedAmount: amount,
         hasContributed: false,
         hasReceived: false,
         joinedAt: new Date().toISOString(),
@@ -259,7 +298,9 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     return { success: true }
   }, [wallet.address, groups])
 
-  const joinFromInvite = useCallback((inviteParam: string, memberName: string): { success: boolean; error?: string } => {
+  const joinFromInvite = useCallback((
+    inviteParam: string, memberName: string, savedAmount?: number
+  ): { success: boolean; error?: string } => {
     const payload = parseInviteParam(inviteParam)
     if (!payload) return { success: false, error: 'Invalid invite link' }
 
@@ -271,7 +312,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       setGroups(prev => [...prev, group])
     }
 
-    return joinGroup(group.id, memberName)
+    return joinGroup(group.id, memberName, savedAmount)
   }, [groups, joinGroup])
 
   const getInviteLink = useCallback((groupId: string): string | null => {
@@ -283,14 +324,16 @@ export function AjoProvider({ children }: { children: ReactNode }) {
   const contribute = useCallback(async (groupId: string) => {
     if (!wallet.address) return { success: false, error: 'Connect your wallet first' }
 
-    const group = groups.find(g => g.id === groupId) ?? getGroupFromRegistry(groupId)
-    if (!group) return { success: false, error: 'Group not found' }
+    const raw = groups.find(g => g.id === groupId) ?? getGroupFromRegistry(groupId)
+    if (!raw) return { success: false, error: 'Group not found' }
+    const group = normalizeGroup(raw)
 
     const member = group.members.find(m => m.address === wallet.address)
     if (!member) return { success: false, error: 'You are not a member' }
     if (member.hasContributed) return { success: false, error: 'Already contributed this round' }
 
-    const result = await sendTransaction(group.treasuryAddress, group.contributionAmount)
+    const amount = getMemberAmount(group, member)
+    const result = await sendTransaction(group.treasuryAddress, amount)
     if (!result.success) return { success: false, error: result.error }
 
     const updated: AjoGroup = {
@@ -305,7 +348,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       id: generateId(),
       groupId,
       memberAddress: wallet.address,
-      amount: group.contributionAmount,
+      amount,
       round: group.currentRound,
       txHash: result.txHash,
       timestamp: new Date().toISOString(),
@@ -316,7 +359,8 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     if (allMembersContributed(updated)) {
       const recipient = getCurrentRecipient(updated)
       if (recipient) {
-        const payout = getPayoutAmount(updated)
+        const allContribs = [...getGroupActivity(groupId).contributions, contribution]
+        const payout = getRoundPayout(updated, allContribs, updated.currentRound)
 
         addGlobalAlert(createTurnAlert(
           updated,
@@ -349,8 +393,9 @@ export function AjoProvider({ children }: { children: ReactNode }) {
   const withdrawPayout = useCallback(async (groupId: string) => {
     if (!wallet.address) return { success: false, error: 'Connect your wallet first' }
 
-    const group = groups.find(g => g.id === groupId) ?? getGroupFromRegistry(groupId)
-    if (!group) return { success: false, error: 'Group not found' }
+    const raw = groups.find(g => g.id === groupId) ?? getGroupFromRegistry(groupId)
+    if (!raw) return { success: false, error: 'Group not found' }
+    const group = normalizeGroup(raw)
     if (!allMembersContributed(group)) return { success: false, error: 'Not all members have contributed yet' }
 
     const recipient = getCurrentRecipient(group)
@@ -363,9 +408,9 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Only the treasurer can release payouts' }
     }
 
-    const payoutAmount = getPayoutAmount(group)
     const groupContribs = getGroupActivity(groupId).contributions
     const groupWithdraws = getGroupActivity(groupId).withdrawals
+    const payoutAmount = getRoundPayout(group, groupContribs, group.currentRound)
     const balance = getTreasuryBalance(groupId, groupContribs, groupWithdraws)
     if (balance < payoutAmount) {
       return { success: false, error: `Insufficient treasury balance (${balance} NIM available, ${payoutAmount} NIM needed)` }
@@ -428,12 +473,15 @@ export function AjoProvider({ children }: { children: ReactNode }) {
           updated.currentRound,
           `You're next in line for ${group.name}! Contribute in round ${updated.currentRound}, then you'll be able to withdraw.`
         ))
+        const savingsHint = updated.contributionMode === 'flexible'
+          ? `your chosen amount (${formatNim(getMemberAmount(updated, next))})`
+          : formatNim(updated.contributionAmount)
         addGlobalAlert(createTurnAlert(
           updated,
           next,
           'contribute_now',
           updated.currentRound,
-          `Round ${updated.currentRound} started in ${group.name}. Please contribute ${group.contributionAmount} NIM.`
+          `Round ${updated.currentRound} started in ${group.name}. Please contribute ${savingsHint}.`
         ))
         refreshAlerts()
       }
@@ -547,7 +595,8 @@ export function AjoProvider({ children }: { children: ReactNode }) {
   }, [wallet.address])
 
   const getGroup = useCallback((groupId: string) => {
-    return groups.find(g => g.id === groupId) ?? getGroupFromRegistry(groupId) ?? undefined
+    const g = groups.find(g => g.id === groupId) ?? getGroupFromRegistry(groupId)
+    return g ? normalizeGroup(g) : undefined
   }, [groups])
 
   return (

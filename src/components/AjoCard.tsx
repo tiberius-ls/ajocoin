@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Users, Coins, ChevronRight } from 'lucide-react'
 import type { AjoGroup } from '../types'
-import { formatNim } from '../lib/utils'
+import { formatSavingsLabel, formatCycleLabel } from '../lib/utils'
 
 interface AjoCardProps {
   group: AjoGroup
@@ -28,13 +28,13 @@ export default function AjoCard({ group }: AjoCardProps) {
       <div className="flex items-center gap-4 text-xs text-white/50 mb-3">
         <span className="flex items-center gap-1">
           <Coins className="w-3.5 h-3.5 text-ajo-gold" />
-          {formatNim(group.contributionAmount)}/cycle
+          {formatSavingsLabel(group)}
         </span>
         <span className="flex items-center gap-1">
           <Users className="w-3.5 h-3.5" />
           {group.members.length}/{group.maxMembers}
         </span>
-        <span>Round {group.currentRound}</span>
+        <span>{formatCycleLabel(group.cycleDays)}</span>
       </div>
 
       <div className="flex items-center gap-3">

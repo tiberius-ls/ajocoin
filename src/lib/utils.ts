@@ -1,4 +1,11 @@
-import type { AjoGroup, Contribution, Withdrawal } from '../types'
+import type { AjoGroup, AjoMember, Contribution, Withdrawal } from '../types'
+
+export const CYCLE_PRESETS = [
+  { label: 'Weekly', days: 7 },
+  { label: 'Bi-weekly', days: 14 },
+  { label: 'Monthly', days: 30 },
+  { label: 'Quarterly', days: 90 },
+] as const
 
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -24,6 +31,54 @@ export function formatDate(date: string): string {
 export function daysBetween(start: string, end: string): number {
   const ms = new Date(end).getTime() - new Date(start).getTime()
   return Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)))
+}
+
+export function formatCycleLabel(days: number): string {
+  const preset = CYCLE_PRESETS.find(p => p.days === days)
+  return preset ? preset.label : `Every ${days} days`
+}
+
+/** Backfill fields for groups created before flexible savings */
+export function normalizeGroup(group: AjoGroup): AjoGroup {
+  const amount = group.contributionAmount ?? 0
+  const mode = group.contributionMode ?? 'fixed'
+  const min = group.minContribution ?? amount
+  const max = group.maxContribution ?? amount
+
+  return {
+    ...group,
+    contributionMode: mode,
+    minContribution: min,
+    maxContribution: max,
+    members: group.members.map(m => ({
+      ...m,
+      savedAmount: m.savedAmount ?? amount,
+    })),
+  }
+}
+
+export function isFlexibleGroup(group: AjoGroup): boolean {
+  return (group.contributionMode ?? 'fixed') === 'flexible'
+}
+
+export function formatSavingsLabel(group: AjoGroup): string {
+  const g = normalizeGroup(group)
+  if (isFlexibleGroup(g)) {
+    return `${formatNim(g.minContribution)} – ${formatNim(g.maxContribution)}`
+  }
+  return `${formatNim(g.contributionAmount)}/cycle`
+}
+
+export function getMemberAmount(group: AjoGroup, member: AjoMember): number {
+  const g = normalizeGroup(group)
+  return member.savedAmount ?? g.contributionAmount
+}
+
+export function validateMemberAmount(group: AjoGroup, amount: number): string | null {
+  const g = normalizeGroup(group)
+  if (amount < g.minContribution) return `Minimum is ${formatNim(g.minContribution)}`
+  if (amount > g.maxContribution) return `Maximum is ${formatNim(g.maxContribution)}`
+  return null
 }
 
 export function vestingProgress(schedule: {
@@ -58,14 +113,40 @@ export function getTreasuryBalance(
   return Math.max(0, contributed - withdrawn)
 }
 
-/** Next member in rotation who has not yet received a payout */
+export function getRoundContributions(
+  contributions: Contribution[],
+  groupId: string,
+  round: number
+): Contribution[] {
+  return contributions.filter(c => c.groupId === groupId && c.round === round)
+}
+
+export function getRoundPayout(
+  group: AjoGroup,
+  contributions: Contribution[],
+  round: number
+): number {
+  const g = normalizeGroup(group)
+  const roundContribs = getRoundContributions(contributions, g.id, round)
+  if (roundContribs.length > 0) {
+    return roundContribs.reduce((sum, c) => sum + c.amount, 0)
+  }
+  // Estimate before all contributions recorded
+  return g.members.reduce((sum, m) => sum + getMemberAmount(g, m), 0)
+}
+
+/** @deprecated use getRoundPayout with contributions */
+export function getPayoutAmount(group: AjoGroup): number {
+  const g = normalizeGroup(group)
+  return g.members.reduce((sum, m) => sum + getMemberAmount(g, m), 0)
+}
+
 export function getCurrentRecipient(group: AjoGroup): AjoGroup['members'][0] | null {
   const receivedCount = group.members.filter(m => m.hasReceived).length
   if (receivedCount >= group.members.length) return null
   return group.members[receivedCount] ?? null
 }
 
-/** Member who will receive after the current recipient */
 export function getNextRecipient(group: AjoGroup): AjoGroup['members'][0] | null {
   const receivedCount = group.members.filter(m => m.hasReceived).length
   const nextIndex = receivedCount + 1
@@ -83,10 +164,6 @@ export function isGroupCreator(group: AjoGroup, address: string | null): boolean
 
 export function isTreasuryHolder(group: AjoGroup, address: string | null): boolean {
   return !!address && group.treasuryAddress === address
-}
-
-export function getPayoutAmount(group: AjoGroup): number {
-  return group.contributionAmount * group.members.length
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {

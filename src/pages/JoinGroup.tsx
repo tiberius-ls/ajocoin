@@ -3,27 +3,37 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { UserPlus, Wallet } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import { parseInviteParam } from '../lib/storage'
-import { formatNim } from '../lib/utils'
+import { formatNim, formatCycleLabel } from '../lib/utils'
 
 export default function JoinGroup() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { isConnected, connecting, connect, connectError, joinFromInvite } = useAjo()
   const [name, setName] = useState('')
+  const [savedAmount, setSavedAmount] = useState('')
   const [error, setError] = useState('')
   const [joining, setJoining] = useState(false)
 
   const inviteParam = params.get('invite')
   const invite = inviteParam ? parseInviteParam(inviteParam) : null
+  const isFlexible = invite?.contributionMode === 'flexible'
+  const defaultAmount = invite
+    ? String(isFlexible ? invite.contributionAmount : invite.contributionAmount)
+    : ''
 
   const handleJoin = () => {
-    if (!inviteParam) return
+    if (!inviteParam || !invite) return
     setJoining(true)
     setError('')
-    const result = joinFromInvite(inviteParam, name)
+
+    const amount = isFlexible
+      ? parseFloat(savedAmount || defaultAmount)
+      : invite.contributionAmount
+
+    const result = joinFromInvite(inviteParam, name, amount)
     setJoining(false)
     if (result.success) {
-      navigate(`/group/${invite?.id}`)
+      navigate(`/group/${invite.id}`)
     } else {
       setError(result.error ?? 'Failed to join')
     }
@@ -38,6 +48,10 @@ export default function JoinGroup() {
     )
   }
 
+  const savingsLabel = isFlexible
+    ? `${formatNim(invite.minContribution)} – ${formatNim(invite.maxContribution)}`
+    : `${formatNim(invite.contributionAmount)}/cycle`
+
   return (
     <div className="space-y-6 max-w-md mx-auto">
       <div className="text-center">
@@ -48,9 +62,9 @@ export default function JoinGroup() {
       <div className="card space-y-3">
         <h3 className="font-semibold text-lg">{invite.name}</h3>
         <p className="text-sm text-white/50">{invite.description}</p>
-        <div className="flex gap-4 text-xs text-white/40 pt-2 border-t border-white/5">
-          <span>{formatNim(invite.contributionAmount)}/cycle</span>
-          <span>{invite.cycleDays} day cycles</span>
+        <div className="flex flex-wrap gap-3 text-xs text-white/40 pt-2 border-t border-white/5">
+          <span>{savingsLabel}</span>
+          <span>{formatCycleLabel(invite.cycleDays)}</span>
           <span>Up to {invite.maxMembers} members</span>
         </div>
       </div>
@@ -73,19 +87,30 @@ export default function JoinGroup() {
           </p>
           <div>
             <label className="label">Your display name</label>
-            <input
-              className="input-field"
-              placeholder="e.g. Ada"
-              value={name}
-              onChange={e => setName(e.target.value)}
-            />
+            <input className="input-field" placeholder="e.g. Ada" value={name} onChange={e => setName(e.target.value)} />
           </div>
+          {isFlexible && (
+            <div>
+              <label className="label">
+                Your savings per cycle (NIM)
+              </label>
+              <input
+                className="input-field"
+                type="number"
+                min={invite.minContribution}
+                max={invite.maxContribution}
+                step="0.01"
+                placeholder={`${invite.minContribution} – ${invite.maxContribution}`}
+                value={savedAmount || defaultAmount}
+                onChange={e => setSavedAmount(e.target.value)}
+              />
+              <p className="text-[11px] text-white/30 mt-1">
+                Choose between {formatNim(invite.minContribution)} and {formatNim(invite.maxContribution)}
+              </p>
+            </div>
+          )}
           {error && <p className="text-sm text-red-400">{error}</p>}
-          <button
-            onClick={handleJoin}
-            disabled={joining || !name.trim()}
-            className="btn-primary w-full"
-          >
+          <button onClick={handleJoin} disabled={joining || !name.trim()} className="btn-primary w-full">
             {joining ? 'Joining…' : 'Join Group'}
           </button>
         </div>
