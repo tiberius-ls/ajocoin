@@ -71,12 +71,33 @@ export interface Withdrawal {
   timestamp: string
 }
 
+export type TurnAlertType = 'ready_to_withdraw' | 'up_next' | 'contribute_now'
+
+export interface TurnAlert {
+  id: string
+  groupId: string
+  groupName: string
+  recipientAddress: string
+  recipientName: string
+  type: TurnAlertType
+  round: number
+  message: string
+  createdAt: string
+  read: boolean
+}
+
+export interface GroupActivity {
+  contributions: Contribution[]
+  withdrawals: Withdrawal[]
+}
+
 export interface AppState {
   groups: AjoGroup[]
   votes: Vote[]
   vesting: VestingSchedule[]
   contributions: Contribution[]
   withdrawals: Withdrawal[]
+  alerts: TurnAlert[]
 }
 
 export interface InvitePayload {

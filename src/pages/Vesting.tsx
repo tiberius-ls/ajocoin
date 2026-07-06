@@ -6,7 +6,7 @@ import EmptyState from '../components/EmptyState'
 import { formatNim, formatDate, vestingProgress, daysBetween } from '../lib/utils'
 
 export default function Vesting() {
-  const { vesting, wallet, isConnected, connecting, connect, connectError, withdrawVested } = useAjo()
+  const { vesting, wallet, myGroups, isConnected, connecting, connect, connectError, withdrawVested } = useAjo()
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
@@ -65,7 +65,9 @@ export default function Vesting() {
             const daysLeft = daysBetween(new Date().toISOString(), schedule.endDate)
             const totalDays = daysBetween(schedule.startDate, schedule.endDate)
             const cliffProgress = (schedule.cliffDays / totalDays) * 100
-            const canWithdraw = remaining > 0 && progress >= cliffProgress
+            const group = myGroups.find(g => g.id === schedule.groupId)
+            const isTreasurer = group?.treasuryAddress === wallet.address
+            const canWithdraw = remaining > 0 && progress >= cliffProgress && isTreasurer
             const chunk = Math.min(remaining, schedule.totalAmount * 0.25)
 
             return (
@@ -126,6 +128,8 @@ export default function Vesting() {
                     <ArrowDownToLine className="w-4 h-4" />
                     {withdrawingId === schedule.id ? 'Withdrawing…' : `Withdraw ${formatNim(chunk)}`}
                   </button>
+                ) : remaining > 0 && !isTreasurer ? (
+                  <p className="text-xs text-white/30 text-center">Treasurer will release vested funds to your wallet</p>
                 ) : remaining > 0 ? (
                   <p className="text-xs text-white/30 text-center">Cliff period not reached yet</p>
                 ) : (

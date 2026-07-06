@@ -58,11 +58,19 @@ export function getTreasuryBalance(
   return Math.max(0, contributed - withdrawn)
 }
 
+/** Next member in rotation who has not yet received a payout */
 export function getCurrentRecipient(group: AjoGroup): AjoGroup['members'][0] | null {
-  const unpaid = group.members.filter(m => !m.hasReceived)
-  if (unpaid.length === 0) return null
-  const index = (group.currentRound - 1) % group.members.length
-  return group.members[index] ?? unpaid[0]
+  const receivedCount = group.members.filter(m => m.hasReceived).length
+  if (receivedCount >= group.members.length) return null
+  return group.members[receivedCount] ?? null
+}
+
+/** Member who will receive after the current recipient */
+export function getNextRecipient(group: AjoGroup): AjoGroup['members'][0] | null {
+  const receivedCount = group.members.filter(m => m.hasReceived).length
+  const nextIndex = receivedCount + 1
+  if (nextIndex >= group.members.length) return null
+  return group.members[nextIndex] ?? null
 }
 
 export function allMembersContributed(group: AjoGroup): boolean {
@@ -71,6 +79,14 @@ export function allMembersContributed(group: AjoGroup): boolean {
 
 export function isGroupCreator(group: AjoGroup, address: string | null): boolean {
   return !!address && group.creatorAddress === address
+}
+
+export function isTreasuryHolder(group: AjoGroup, address: string | null): boolean {
+  return !!address && group.treasuryAddress === address
+}
+
+export function getPayoutAmount(group: AjoGroup): number {
+  return group.contributionAmount * group.members.length
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {

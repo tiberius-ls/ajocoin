@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { Home, PlusCircle, LayoutDashboard, Vote, Lock, Wallet, LogOut } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import { shortenAddress } from '../lib/utils'
+import TurnAlerts from './TurnAlerts'
 
 const navItems = [
   { to: '/', icon: Home, label: 'Home' },
@@ -56,6 +57,7 @@ export default function Layout() {
       </header>
 
       <main className="flex-1 px-4 py-5 pb-24 animate-fade-in">
+        <TurnAlerts />
         <Outlet />
       </main>
 

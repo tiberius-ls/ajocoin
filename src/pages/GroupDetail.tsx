@@ -1,23 +1,30 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Check, Clock, Send, UserPlus, Share2, Copy, Wallet, ArrowDownToLine } from 'lucide-react'
+import {
+  ArrowLeft, Check, Clock, Send, UserPlus, Share2, Copy, Wallet,
+  ArrowDownToLine, Trash2, AlertTriangle,
+} from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import {
   formatNim, shortenAddress, formatDate, getTreasuryBalance,
-  getCurrentRecipient, allMembersContributed, isGroupCreator, shareLink,
+  getCurrentRecipient, allMembersContributed, isGroupCreator,
+  isTreasuryHolder, getPayoutAmount, shareLink,
 } from '../lib/utils'
 
 export default function GroupDetail() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const {
     wallet, isConnected, connecting, connect, connectError,
     getGroup, contribute, joinGroup, addMember, getInviteLink,
-    withdrawPayout, contributions, withdrawals,
+    withdrawPayout, deleteGroup, getGroupContributions, getGroupWithdrawals,
   } = useAjo()
 
   const [contributing, setContributing] = useState(false)
   const [withdrawing, setWithdrawing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [joinName, setJoinName] = useState('')
   const [memberName, setMemberName] = useState('')
   const [memberAddress, setMemberAddress] = useState('')
@@ -53,14 +60,15 @@ export default function GroupDetail() {
   const isMember = group.members.some(m => m.address === wallet.address)
   const currentMember = group.members.find(m => m.address === wallet.address)
   const isCreator = isGroupCreator(group, wallet.address)
-  const groupContributions = contributions.filter(c => c.groupId === group.id)
-  const groupWithdrawals = withdrawals.filter(w => w.groupId === group.id)
-  const treasuryBalance = getTreasuryBalance(group.id, contributions, withdrawals)
+  const isTreasurer = isTreasuryHolder(group, wallet.address)
+  const groupContributions = getGroupContributions(group.id)
+  const groupWithdrawals = getGroupWithdrawals(group.id)
+  const treasuryBalance = getTreasuryBalance(group.id, groupContributions, groupWithdrawals)
   const recipient = getCurrentRecipient(group)
-  const canWithdrawPayout = isMember
-    && recipient?.address === wallet.address
-    && allMembersContributed(group)
-    && treasuryBalance >= group.contributionAmount * group.members.length
+  const payoutAmount = getPayoutAmount(group)
+  const allContributed = allMembersContributed(group)
+  const isRecipient = recipient?.address === wallet.address
+  const canReleasePayout = isTreasurer && allContributed && recipient && treasuryBalance >= payoutAmount
   const inviteLink = getInviteLink(group.id)
 
   const handleContribute = async () => {
@@ -79,8 +87,22 @@ export default function GroupDetail() {
     setMessage('')
     const result = await withdrawPayout(group.id)
     setWithdrawing(false)
-    if (result.success) setMessage(`Withdrew ${formatNim(group.contributionAmount * group.members.length)}!`)
-    else setError(result.error ?? 'Withdrawal failed')
+    if (result.success) {
+      const msg = result.nextRecipient
+        ? `Payout released! ${result.nextRecipient} is up next and has been notified.`
+        : `Payout of ${formatNim(payoutAmount)} released successfully!`
+      setMessage(msg)
+    } else {
+      setError(result.error ?? 'Withdrawal failed')
+    }
+  }
+
+  const handleDelete = () => {
+    setDeleting(true)
+    const result = deleteGroup(group.id)
+    setDeleting(false)
+    if (result.success) navigate('/dashboard')
+    else setError(result.error ?? 'Failed to delete group')
   }
 
   const handleJoin = () => {
@@ -133,8 +155,10 @@ export default function GroupDetail() {
           <h2 className="text-xl font-bold">{group.name}</h2>
           <p className="text-sm text-white/40 mt-1">{group.description}</p>
         </div>
-        <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-nimiq-green/20 text-nimiq-green shrink-0">
-          Round {group.currentRound}
+        <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full shrink-0 ${
+          group.status === 'completed' ? 'bg-white/10 text-white/50' : 'bg-nimiq-green/20 text-nimiq-green'
+        }`}>
+          {group.status === 'completed' ? 'Done' : `Round ${group.currentRound}`}
         </span>
       </div>
 
@@ -153,14 +177,23 @@ export default function GroupDetail() {
         </div>
       </div>
 
-      {isMember && (
-        <div className="card !p-3 flex items-center justify-between">
+      {isMember && recipient && group.status === 'active' && (
+        <div className={`card !p-3 flex items-center justify-between ${
+          isRecipient ? 'border-ajo-gold/30 bg-ajo-gold/5' : ''
+        }`}>
           <div>
             <p className="text-[10px] text-white/40 uppercase">Current recipient</p>
-            <p className="text-sm font-medium">{recipient?.name ?? '—'}</p>
+            <p className="text-sm font-medium">{recipient.name}</p>
+            {!allContributed && (
+              <p className="text-[10px] text-white/30 mt-0.5">
+                {group.members.filter(m => m.hasContributed).length}/{group.members.length} contributed
+              </p>
+            )}
           </div>
-          {recipient?.address === wallet.address && (
-            <span className="text-[10px] font-semibold text-ajo-gold bg-ajo-gold/10 px-2 py-1 rounded-full">Your turn</span>
+          {isRecipient && (
+            <span className="text-[10px] font-semibold text-ajo-gold bg-ajo-gold/10 px-2 py-1 rounded-full">
+              {allContributed ? 'Your turn!' : 'Your turn (pending contributions)'}
+            </span>
           )}
         </div>
       )}
@@ -180,27 +213,44 @@ export default function GroupDetail() {
       )}
       {shareStatus && <p className="text-xs text-nimiq-green text-center">{shareStatus}</p>}
 
-      {isMember && currentMember && !currentMember.hasContributed && (
+      {isMember && currentMember && !currentMember.hasContributed && group.status === 'active' && (
         <button onClick={handleContribute} disabled={contributing} className="btn-gold w-full flex items-center justify-center gap-2">
           <Send className="w-4 h-4" />
           {contributing ? 'Sending…' : `Contribute ${formatNim(group.contributionAmount)}`}
         </button>
       )}
 
-      {isMember && currentMember?.hasContributed && !canWithdrawPayout && (
+      {isMember && currentMember?.hasContributed && !canReleasePayout && group.status === 'active' && (
         <div className="flex items-center gap-2 text-sm text-nimiq-green bg-nimiq-green/10 rounded-xl px-4 py-3">
           <Check className="w-4 h-4" /> You've contributed this round
+          {isRecipient && !allContributed && (
+            <span className="text-white/40">— waiting for other members</span>
+          )}
         </div>
       )}
 
-      {canWithdrawPayout && (
+      {isRecipient && allContributed && !isTreasurer && (
+        <div className="card !p-4 flex items-start gap-3 border-ajo-gold/20">
+          <AlertTriangle className="w-5 h-5 text-ajo-gold shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-ajo-gold">It's your turn to receive!</p>
+            <p className="text-xs text-white/40 mt-1">
+              {formatNim(payoutAmount)} is ready. The treasurer will release the payout to your wallet.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {canReleasePayout && (
         <button onClick={handleWithdraw} disabled={withdrawing} className="btn-primary w-full flex items-center justify-center gap-2">
           <ArrowDownToLine className="w-4 h-4" />
-          {withdrawing ? 'Withdrawing…' : `Withdraw ${formatNim(group.contributionAmount * group.members.length)}`}
+          {withdrawing
+            ? 'Releasing…'
+            : `Release ${formatNim(payoutAmount)} to ${recipient!.name}`}
         </button>
       )}
 
-      {!isMember && group.members.length < group.maxMembers && (
+      {!isMember && group.members.length < group.maxMembers && group.status === 'active' && (
         <div className="card space-y-3">
           <p className="text-sm font-medium flex items-center gap-2">
             <UserPlus className="w-4 h-4 text-nimiq-green" /> Join this group
@@ -210,27 +260,46 @@ export default function GroupDetail() {
         </div>
       )}
 
-      {isCreator && group.members.length < group.maxMembers && (
+      {isCreator && group.members.length < group.maxMembers && group.status === 'active' && (
         <div className="card space-y-3">
           <p className="text-sm font-medium flex items-center gap-2">
             <UserPlus className="w-4 h-4 text-ajo-gold" /> Add member
           </p>
           <input className="input-field" placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
           <input className="input-field" placeholder="Nimiq address" value={memberAddress} onChange={e => setMemberAddress(e.target.value)} />
-          <button
-            onClick={handleAddMember}
-            disabled={!memberName.trim() || !memberAddress.trim()}
-            className="btn-secondary w-full"
-          >
+          <button onClick={handleAddMember} disabled={!memberName.trim() || !memberAddress.trim()} className="btn-secondary w-full">
             Add Member
           </button>
+        </div>
+      )}
+
+      {isCreator && (
+        <div className="card space-y-3 border-red-400/10">
+          {!showDeleteConfirm ? (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 text-sm text-red-400 hover:text-red-300 py-2"
+            >
+              <Trash2 className="w-4 h-4" /> Delete group
+            </button>
+          ) : (
+            <>
+              <p className="text-sm text-white/50 text-center">Delete this group permanently? This cannot be undone.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setShowDeleteConfirm(false)} className="btn-secondary flex-1">Cancel</button>
+                <button onClick={handleDelete} disabled={deleting} className="flex-1 px-4 py-3 rounded-xl bg-red-500/20 text-red-400 font-semibold hover:bg-red-500/30">
+                  {deleting ? 'Deleting…' : 'Confirm delete'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
       <section>
         <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-3">Members</h3>
         <div className="space-y-2">
-          {group.members.map(member => (
+          {group.members.map((member, idx) => (
             <div key={member.address} className="card !p-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-ajo-slate flex items-center justify-center text-xs font-bold">
@@ -241,6 +310,9 @@ export default function GroupDetail() {
                     {member.name}
                     {member.address === group.creatorAddress && (
                       <span className="text-[10px] text-ajo-gold ml-1.5">Creator</span>
+                    )}
+                    {recipient?.address === member.address && !member.hasReceived && group.status === 'active' && (
+                      <span className="text-[10px] text-nimiq-green ml-1.5">#{idx + 1} in line</span>
                     )}
                   </p>
                   <p className="text-[10px] text-white/30">{shortenAddress(member.address)}</p>
@@ -264,24 +336,27 @@ export default function GroupDetail() {
         <section>
           <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-3">Activity</h3>
           <div className="space-y-2">
-            {groupContributions.slice(-3).reverse().map(c => (
-              <div key={c.id} className="card !p-3 flex items-center justify-between text-sm">
-                <div>
-                  <p className="font-medium text-nimiq-green">+ {formatNim(c.amount)}</p>
-                  <p className="text-[10px] text-white/30">Contribution · Round {c.round}</p>
-                </div>
-                <span className="text-[10px] text-white/30">{formatDate(c.timestamp)}</span>
-              </div>
-            ))}
-            {groupWithdrawals.slice(-3).reverse().map(w => (
-              <div key={w.id} className="card !p-3 flex items-center justify-between text-sm">
-                <div>
-                  <p className="font-medium text-ajo-gold">− {formatNim(w.amount)}</p>
-                  <p className="text-[10px] text-white/30">{w.type === 'payout' ? 'Payout' : 'Vested'} withdrawal</p>
-                </div>
-                <span className="text-[10px] text-white/30">{formatDate(w.timestamp)}</span>
-              </div>
-            ))}
+            {[...groupContributions, ...groupWithdrawals]
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+              .slice(0, 6)
+              .map(item => {
+                const isWithdrawal = 'type' in item
+                return (
+                  <div key={item.id} className="card !p-3 flex items-center justify-between text-sm">
+                    <div>
+                      <p className={`font-medium ${isWithdrawal ? 'text-ajo-gold' : 'text-nimiq-green'}`}>
+                        {isWithdrawal ? '−' : '+'} {formatNim(item.amount)}
+                      </p>
+                      <p className="text-[10px] text-white/30">
+                        {isWithdrawal
+                          ? `${(item as typeof groupWithdrawals[0]).type} withdrawal`
+                          : `Contribution · Round ${(item as typeof groupContributions[0]).round}`}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-white/30">{formatDate(item.timestamp)}</span>
+                  </div>
+                )
+              })}
           </div>
         </section>
       )}
