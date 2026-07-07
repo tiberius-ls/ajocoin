@@ -139,14 +139,19 @@ export function AjoProvider({ children }: { children: ReactNode }) {
 
   const loadUserState = useCallback(async (address: string) => {
     const state = loadState(address)
-    await hydrateSharedStore(address, state.groups.map(g => g.id))
-    const mergedGroups = mergeGroupsFromRegistry(state.groups, address)
-    setGroups(mergedGroups)
+    setGroups(mergeGroupsFromRegistry(state.groups, address))
     setVotes(state.votes)
     setVesting(state.vesting)
     setContributions([])
     setWithdrawals([])
     setAlerts(loadGlobalAlerts())
+
+    try {
+      await hydrateSharedStore(address, state.groups.map(g => g.id))
+      setGroups(prev => mergeGroupsFromRegistry(prev, address))
+    } catch {
+      // Keep wallet-local cache when the shared store is unreachable.
+    }
   }, [mergeGroupsFromRegistry])
 
   const clearState = useCallback(() => {

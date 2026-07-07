@@ -160,7 +160,8 @@ async function main() {
     check('Bob sees creator on group page', bobSeesCreator || await bob.getByText('You').isVisible().catch(() => false))
 
     await connect(bob, `${BASE}/dashboard`)
-    check('Bob dashboard lists group', await bob.getByText(GROUP_NAME).isVisible().catch(() => false))
+    const bobDashboardGroup = await bob.getByText(GROUP_NAME).waitFor({ timeout: 15000 }).then(() => true).catch(() => false)
+    check('Bob dashboard lists group', bobDashboardGroup)
 
   } finally {
     if (groupId) await deleteGroup(groupId).catch(() => {})
