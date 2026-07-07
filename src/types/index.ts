@@ -56,6 +56,8 @@ export interface VestingSchedule {
   cliffDays: number
 }
 
+export type ContributionStatus = 'pending' | 'confirmed'
+
 export interface Contribution {
   id: string
   groupId: string
@@ -64,6 +66,7 @@ export interface Contribution {
   round: number
   txHash?: string
   timestamp: string
+  status?: ContributionStatus
 }
 
 export interface Withdrawal {

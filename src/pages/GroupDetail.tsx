@@ -82,8 +82,15 @@ export default function GroupDetail() {
     setMessage('')
     const result = await contribute(group.id)
     setContributing(false)
-    if (result.success) setMessage('Contribution sent successfully!')
-    else setError(result.error ?? 'Failed to contribute')
+    if (result.success) {
+      setMessage(
+        result.pending
+          ? 'Transaction sent — confirming on the Nimiq chain…'
+          : 'Contribution confirmed!'
+      )
+    } else {
+      setError(result.error ?? 'Failed to contribute')
+    }
   }
 
   const handleWithdraw = async () => {

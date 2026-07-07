@@ -7,6 +7,10 @@ dist/
 # env
 .env
 .env.*
+!.env.example
+
+# generated submission screenshots
+submission-assets/
 
 # vercel
 .vercel/

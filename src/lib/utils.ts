@@ -138,13 +138,17 @@ export function vestingProgress(schedule: {
   return Math.round(Math.max(timeProgress, amountProgress))
 }
 
+export function isConfirmedContribution(c: Contribution): boolean {
+  return !c.status || c.status === 'confirmed'
+}
+
 export function getTreasuryBalance(
   groupId: string,
   contributions: Contribution[],
   withdrawals: Withdrawal[]
 ): number {
   const contributed = contributions
-    .filter(c => c.groupId === groupId)
+    .filter(c => c.groupId === groupId && isConfirmedContribution(c))
     .reduce((sum, c) => sum + c.amount, 0)
   const withdrawn = withdrawals
     .filter(w => w.groupId === groupId)
@@ -157,7 +161,9 @@ export function getRoundContributions(
   groupId: string,
   round: number
 ): Contribution[] {
-  return contributions.filter(c => c.groupId === groupId && c.round === round)
+  return contributions.filter(
+    c => c.groupId === groupId && c.round === round && isConfirmedContribution(c)
+  )
 }
 
 export function getRoundPayout(

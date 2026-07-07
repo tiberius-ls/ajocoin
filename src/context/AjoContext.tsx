@@ -4,8 +4,11 @@ import {
   loadState, saveState, syncGroupToRegistry, getGroupFromRegistry,
   buildInviteUrl, parseInviteParam, inviteToGroup,
   removeGroupFromRegistry, loadGlobalAlerts, addGlobalAlert, markAlertRead,
-  removeAlertsForGroup, getGroupActivity, appendContribution, appendWithdrawal,
+  removeAlertsForGroup, getGroupActivity,
   removeGroupActivity, loadRegistry, resolveGroup,
+  hydrateSharedStore, submitContributionToStore, submitWithdrawalToStore,
+  retryConfirmContribution, startSharedStorePolling, stopSharedStorePolling,
+  onSharedStoreUpdate,
 } from '../lib/storage'
 import { connectWallet, sendTransaction, disconnectWallet, type WalletState } from '../lib/nimiq'
 import {
@@ -35,7 +38,7 @@ interface AjoContextValue {
   joinGroup: (groupId: string, memberName: string, savedAmount?: number) => { success: boolean; error?: string }
   joinFromInvite: (inviteParam: string, memberName: string, savedAmount?: number) => { success: boolean; error?: string }
   getInviteLink: (groupId: string) => string | null
-  contribute: (groupId: string) => Promise<{ success: boolean; error?: string }>
+  contribute: (groupId: string) => Promise<{ success: boolean; error?: string; pending?: boolean }>
   withdrawPayout: (groupId: string) => Promise<{ success: boolean; error?: string; nextRecipient?: string }>
   withdrawVested: (vestingId: string) => Promise<{ success: boolean; error?: string }>
   deleteGroup: (groupId: string) => { success: boolean; error?: string }
@@ -129,16 +132,20 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     return Array.from(merged.values())
   }, [])
 
-  const loadUserState = useCallback((address: string) => {
+  const refreshFromSharedStore = useCallback((address: string) => {
+    setGroups(prev => mergeGroupsFromRegistry(prev, address))
+  }, [mergeGroupsFromRegistry])
+
+  const loadUserState = useCallback(async (address: string) => {
     const state = loadState(address)
+    await hydrateSharedStore(address, state.groups.map(g => g.id))
     const mergedGroups = mergeGroupsFromRegistry(state.groups, address)
     setGroups(mergedGroups)
     setVotes(state.votes)
     setVesting(state.vesting)
-    setContributions(state.contributions)
-    setWithdrawals(state.withdrawals ?? [])
+    setContributions([])
+    setWithdrawals([])
     setAlerts(loadGlobalAlerts())
-    mergedGroups.forEach(syncGroupToRegistry)
   }, [mergeGroupsFromRegistry])
 
   const clearState = useCallback(() => {
@@ -155,6 +162,22 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       saveState(wallet.address, { groups, votes, vesting, contributions, withdrawals, alerts })
     }
   }, [groups, votes, vesting, contributions, withdrawals, alerts, wallet.address])
+
+  useEffect(() => {
+    if (!wallet.address) {
+      stopSharedStorePolling()
+      return
+    }
+
+    const groupIds = groups.map(g => g.id)
+    startSharedStorePolling(wallet.address, groupIds)
+    const unsub = onSharedStoreUpdate(() => refreshFromSharedStore(wallet.address!))
+
+    return () => {
+      stopSharedStorePolling()
+      unsub()
+    }
+  }, [wallet.address, groups.map(g => g.id).join(','), refreshFromSharedStore])
 
   const connect = useCallback(async () => {
     setConnecting(true)
@@ -310,6 +333,8 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     const payload = parseInviteParam(inviteParam)
     if (!payload) return { success: false, error: 'Invalid invite link' }
 
+    void hydrateSharedStore(wallet.address ?? '', [payload.id])
+
     const existing = getGroupFromRegistry(payload.id)
     const group = existing ?? inviteToGroup(payload, [])
     if (!existing) syncGroupToRegistry(group)
@@ -319,7 +344,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     }
 
     return joinGroup(group.id, memberName, savedAmount)
-  }, [groups, joinGroup])
+  }, [groups, joinGroup, wallet.address])
 
   const getInviteLink = useCallback((groupId: string): string | null => {
     const group = groups.find(g => g.id === groupId) ?? getGroupFromRegistry(groupId)
@@ -341,14 +366,6 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     const result = await sendTransaction(group.treasuryAddress, amount)
     if (!result.success) return { success: false, error: result.error }
 
-    const updated: AjoGroup = {
-      ...group,
-      members: group.members.map(m =>
-        m.address === wallet.address ? { ...m, hasContributed: true } : m
-      ),
-    }
-    persistGroup(updated, setGroups)
-
     const contribution: Contribution = {
       id: generateId(),
       groupId,
@@ -357,9 +374,34 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       round: group.currentRound,
       txHash: result.txHash,
       timestamp: new Date().toISOString(),
+      status: 'pending',
     }
-    setContributions(prev => [...prev, contribution])
-    appendContribution(contribution)
+
+    let saved: Contribution
+    try {
+      saved = await submitContributionToStore(contribution)
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to save contribution' }
+    }
+
+    setContributions(prev => [...prev, saved])
+
+    if (saved.status === 'pending') {
+      void retryConfirmContribution(saved.id, groupId).then(confirmed => {
+        if (confirmed?.status === 'confirmed') {
+          refreshFromSharedStore(wallet.address!)
+        }
+      })
+      return { success: true, pending: true }
+    }
+
+    const updated: AjoGroup = {
+      ...group,
+      members: group.members.map(m =>
+        m.address === wallet.address ? { ...m, hasContributed: true } : m
+      ),
+    }
+    persistGroup(updated, setGroups)
 
     if (allMembersContributed(updated)) {
       const recipient = getCurrentRecipient(updated)
@@ -393,7 +435,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     }
 
     return { success: true }
-  }, [wallet.address, groups, refreshAlerts])
+  }, [wallet.address, groups, refreshAlerts, refreshFromSharedStore])
 
   const withdrawPayout = useCallback(async (groupId: string) => {
     if (!wallet.address) return { success: false, error: 'Connect your wallet first' }
@@ -448,8 +490,12 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       txHash: result.txHash,
       timestamp: new Date().toISOString(),
     }
+    try {
+      await submitWithdrawalToStore(withdrawal)
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to save withdrawal' }
+    }
     setWithdrawals(prev => [...prev, withdrawal])
-    appendWithdrawal(withdrawal)
 
     let nextRecipientName: string | undefined
     if (!allReceived) {
@@ -531,8 +577,12 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       txHash: result.txHash,
       timestamp: new Date().toISOString(),
     }
+    try {
+      await submitWithdrawalToStore(withdrawal)
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to save withdrawal' }
+    }
     setWithdrawals(prev => [...prev, withdrawal])
-    appendWithdrawal(withdrawal)
 
     return { success: true }
   }, [wallet.address, vesting, groups])

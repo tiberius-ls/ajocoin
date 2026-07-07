@@ -1,9 +1,18 @@
 import type { AppState, AjoGroup, InvitePayload, TurnAlert, GroupActivity, Contribution, Withdrawal } from '../types'
 import { normalizeGroup, mergeTwoGroups } from './utils'
+import {
+  isServerStoreEnabled,
+  fetchMemberGroups,
+  fetchGroup,
+  fetchGroupActivity,
+  putGroupRemote,
+  deleteGroupRemote,
+  postContribution,
+  postWithdrawal,
+  confirmContribution,
+} from './serverApi'
 
-const REGISTRY_KEY = 'ajocoin-registry'
 const ALERTS_KEY = 'ajocoin-alerts'
-const ACTIVITY_KEY = 'ajocoin-activity'
 
 const defaultState: AppState = {
   groups: [],
@@ -14,8 +23,34 @@ const defaultState: AppState = {
   alerts: [],
 }
 
+/** In-memory shared cache — source of truth is the server when configured. */
+let registryCache: Record<string, AjoGroup> = {}
+let activityCache: Record<string, GroupActivity> = {}
+
+let syncListeners: Array<() => void> = []
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
 function userKey(address: string): string {
   return `ajocoin-${address.replace(/\s/g, '')}`
+}
+
+function notifySyncListeners(): void {
+  syncListeners.forEach(fn => fn())
+}
+
+export function onSharedStoreUpdate(listener: () => void): () => void {
+  syncListeners.push(listener)
+  return () => {
+    syncListeners = syncListeners.filter(l => l !== listener)
+  }
+}
+
+function setRegistryCache(registry: Record<string, AjoGroup>): void {
+  registryCache = registry
+}
+
+function setActivityCache(groupId: string, activity: GroupActivity): void {
+  activityCache[groupId] = activity
 }
 
 export function loadState(address: string | null): AppState {
@@ -23,44 +58,58 @@ export function loadState(address: string | null): AppState {
   try {
     const raw = localStorage.getItem(userKey(address))
     if (!raw) return { ...defaultState }
-    return { ...defaultState, ...JSON.parse(raw) }
+    const parsed = JSON.parse(raw) as AppState
+    return {
+      ...defaultState,
+      ...parsed,
+      contributions: [],
+      withdrawals: [],
+    }
   } catch {
     return { ...defaultState }
   }
 }
 
+/** Persists wallet-local data only (votes, vesting, group membership refs, alerts). */
 export function saveState(address: string, state: AppState): void {
-  localStorage.setItem(userKey(address), JSON.stringify(state))
+  const localOnly: AppState = {
+    ...state,
+    contributions: [],
+    withdrawals: [],
+  }
+  localStorage.setItem(userKey(address), JSON.stringify(localOnly))
 }
 
 export function loadRegistry(): Record<string, AjoGroup> {
-  try {
-    const raw = localStorage.getItem(REGISTRY_KEY)
-    if (!raw) return {}
-    return JSON.parse(raw)
-  } catch {
-    return {}
-  }
+  return { ...registryCache }
 }
 
-export function saveRegistry(registry: Record<string, AjoGroup>): void {
-  localStorage.setItem(REGISTRY_KEY, JSON.stringify(registry))
+export function saveRegistry(_registry: Record<string, AjoGroup>): void {
+  // No-op: registry is not persisted to localStorage.
 }
 
 export function syncGroupToRegistry(group: AjoGroup): void {
-  const registry = loadRegistry()
-  registry[group.id] = group
-  saveRegistry(registry)
+  const normalized = normalizeGroup(group)
+  registryCache[group.id] = normalized
+  if (isServerStoreEnabled()) {
+    void putGroupRemote(normalized).then(remote => {
+      if (remote) {
+        registryCache[group.id] = normalizeGroup(remote)
+        notifySyncListeners()
+      }
+    })
+  }
 }
 
 export function removeGroupFromRegistry(groupId: string): void {
-  const registry = loadRegistry()
-  delete registry[groupId]
-  saveRegistry(registry)
+  delete registryCache[groupId]
+  if (isServerStoreEnabled()) {
+    void deleteGroupRemote(groupId)
+  }
 }
 
 export function getGroupFromRegistry(groupId: string): AjoGroup | null {
-  return loadRegistry()[groupId] ?? null
+  return registryCache[groupId] ?? null
 }
 
 export function resolveGroup(groupId: string, localGroups: AjoGroup[]): AjoGroup | undefined {
@@ -107,48 +156,131 @@ export function removeAlertsForGroup(groupId: string): void {
 }
 
 export function loadGroupActivity(): Record<string, GroupActivity> {
-  try {
-    const raw = localStorage.getItem(ACTIVITY_KEY)
-    if (!raw) return {}
-    return JSON.parse(raw)
-  } catch {
-    return {}
-  }
+  return { ...activityCache }
 }
 
-export function saveGroupActivity(activity: Record<string, GroupActivity>): void {
-  localStorage.setItem(ACTIVITY_KEY, JSON.stringify(activity))
+export function saveGroupActivity(_activity: Record<string, GroupActivity>): void {
+  // No-op: activity is not persisted to localStorage.
 }
 
 export function getGroupActivity(groupId: string): GroupActivity {
-  const all = loadGroupActivity()
-  return all[groupId] ?? { contributions: [], withdrawals: [] }
+  return activityCache[groupId] ?? { contributions: [], withdrawals: [] }
 }
 
 export function appendContribution(contribution: Contribution): void {
-  const all = loadGroupActivity()
-  const activity = all[contribution.groupId] ?? { contributions: [], withdrawals: [] }
+  const activity = activityCache[contribution.groupId] ?? { contributions: [], withdrawals: [] }
   if (!activity.contributions.some(c => c.id === contribution.id)) {
     activity.contributions.push(contribution)
-    all[contribution.groupId] = activity
-    saveGroupActivity(all)
+    activityCache[contribution.groupId] = activity
   }
 }
 
 export function appendWithdrawal(withdrawal: Withdrawal): void {
-  const all = loadGroupActivity()
-  const activity = all[withdrawal.groupId] ?? { contributions: [], withdrawals: [] }
+  const activity = activityCache[withdrawal.groupId] ?? { contributions: [], withdrawals: [] }
   if (!activity.withdrawals.some(w => w.id === withdrawal.id)) {
     activity.withdrawals.push(withdrawal)
-    all[withdrawal.groupId] = activity
-    saveGroupActivity(all)
+    activityCache[withdrawal.groupId] = activity
   }
 }
 
 export function removeGroupActivity(groupId: string): void {
-  const all = loadGroupActivity()
-  delete all[groupId]
-  saveGroupActivity(all)
+  delete activityCache[groupId]
+}
+
+/** Pull shared group + activity state from the server into in-memory cache. */
+export async function hydrateSharedStore(
+  address: string,
+  knownGroupIds: string[] = []
+): Promise<void> {
+  if (!isServerStoreEnabled()) return
+
+  try {
+    const remoteGroups = await fetchMemberGroups(address)
+    const idSet = new Set([...knownGroupIds, ...remoteGroups.map(g => g.id)])
+
+    const registry: Record<string, AjoGroup> = { ...registryCache }
+    for (const g of remoteGroups) {
+      registry[g.id] = normalizeGroup(g)
+    }
+
+    await Promise.all([...idSet].map(async id => {
+      if (!registry[id]) {
+        const g = await fetchGroup(id)
+        if (g) registry[id] = normalizeGroup(g)
+      }
+      const activity = await fetchGroupActivity(id)
+      setActivityCache(id, activity)
+    }))
+
+    setRegistryCache(registry)
+    notifySyncListeners()
+  } catch {
+    // Keep last in-memory cache on network failure.
+  }
+}
+
+export async function submitContributionToStore(
+  contribution: Contribution
+): Promise<Contribution> {
+  if (!isServerStoreEnabled()) {
+    appendContribution({ ...contribution, status: 'confirmed' })
+    return { ...contribution, status: 'confirmed' }
+  }
+
+  const { contribution: saved } = await postContribution(contribution)
+  appendContribution(saved)
+  notifySyncListeners()
+  return saved
+}
+
+export async function submitWithdrawalToStore(
+  withdrawal: Withdrawal
+): Promise<Withdrawal> {
+  if (!isServerStoreEnabled()) {
+    appendWithdrawal(withdrawal)
+    return withdrawal
+  }
+
+  const { withdrawal: saved } = await postWithdrawal(withdrawal)
+  appendWithdrawal(saved)
+  notifySyncListeners()
+  return saved
+}
+
+export async function retryConfirmContribution(
+  contributionId: string,
+  groupId: string
+): Promise<Contribution | null> {
+  if (!isServerStoreEnabled()) return null
+  const { contribution } = await confirmContribution(contributionId, groupId)
+  appendContribution(contribution)
+  const group = registryCache[groupId]
+  if (group && contribution.status === 'confirmed') {
+    registryCache[groupId] = {
+      ...group,
+      members: group.members.map(m =>
+        m.address === contribution.memberAddress ? { ...m, hasContributed: true } : m
+      ),
+    }
+  }
+  notifySyncListeners()
+  return contribution
+}
+
+export function startSharedStorePolling(address: string, groupIds: string[], intervalMs = 5000): void {
+  stopSharedStorePolling()
+  if (!isServerStoreEnabled() || !address) return
+
+  pollTimer = setInterval(() => {
+    void hydrateSharedStore(address, groupIds)
+  }, intervalMs)
+}
+
+export function stopSharedStorePolling(): void {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
 }
 
 export function buildInviteUrl(group: AjoGroup): string {
