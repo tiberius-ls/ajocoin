@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -19,7 +19,7 @@ export default function GroupDetail() {
   const {
     wallet, isConnected, connecting, connect, connectError,
     getGroup, contribute, joinGroup, addMember, getInviteLink,
-    withdrawPayout, deleteGroup, getGroupContributions, getGroupWithdrawals,
+    withdrawPayout, deleteGroup, getGroupContributions, getGroupWithdrawals, refreshGroup,
   } = useAjo()
 
   const [contributing, setContributing] = useState(false)
@@ -36,6 +36,10 @@ export default function GroupDetail() {
   const [shareStatus, setShareStatus] = useState('')
 
   const group = id ? getGroup(id) : undefined
+
+  useEffect(() => {
+    if (id && isConnected) void refreshGroup(id)
+  }, [id, isConnected, refreshGroup])
 
   if (!isConnected) {
     return (

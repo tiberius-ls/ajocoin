@@ -188,6 +188,23 @@ export function removeGroupActivity(groupId: string): void {
 }
 
 /** Pull shared group + activity state from the server into in-memory cache. */
+/** Fetch one group from the server and apply to the in-memory cache. */
+export async function pullGroupFromServer(groupId: string): Promise<AjoGroup | null> {
+  if (!isServerStoreEnabled()) return getGroupFromRegistry(groupId)
+  try {
+    const g = await fetchGroup(groupId)
+    if (!g) return null
+    const normalized = normalizeGroup(g)
+    registryCache[groupId] = normalized
+    const activity = await fetchGroupActivity(groupId)
+    setActivityCache(groupId, activity)
+    notifySyncListeners()
+    return normalized
+  } catch {
+    return getGroupFromRegistry(groupId)
+  }
+}
+
 export async function hydrateSharedStore(
   address: string,
   knownGroupIds: string[] = []
@@ -204,10 +221,8 @@ export async function hydrateSharedStore(
     }
 
     await Promise.all([...idSet].map(async id => {
-      if (!registry[id]) {
-        const g = await fetchGroup(id)
-        if (g) registry[id] = normalizeGroup(g)
-      }
+      const g = await fetchGroup(id)
+      if (g) registry[id] = normalizeGroup(g)
       const activity = await fetchGroupActivity(id)
       setActivityCache(id, activity)
     }))

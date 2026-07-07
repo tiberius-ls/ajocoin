@@ -8,7 +8,7 @@ import {
   removeGroupActivity, loadRegistry, resolveGroup,
   hydrateSharedStore, submitContributionToStore, submitWithdrawalToStore,
   retryConfirmContribution, startSharedStorePolling, stopSharedStorePolling,
-  onSharedStoreUpdate,
+  onSharedStoreUpdate, pullGroupFromServer,
 } from '../lib/storage'
 import { connectWallet, sendTransaction, disconnectWallet, type WalletState } from '../lib/nimiq'
 import {
@@ -48,6 +48,7 @@ interface AjoContextValue {
   getGroup: (groupId: string) => AjoGroup | undefined
   getGroupContributions: (groupId: string) => Contribution[]
   getGroupWithdrawals: (groupId: string) => Withdrawal[]
+  refreshGroup: (groupId: string) => Promise<void>
 }
 
 const defaultWallet: WalletState = {
@@ -649,13 +650,29 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     return resolveGroup(groupId, groups)
   }, [groups])
 
+  const refreshGroup = useCallback(async (groupId: string) => {
+    if (!wallet.address) return
+    const remote = await pullGroupFromServer(groupId)
+    if (remote) {
+      setGroups(prev => {
+        const exists = prev.some(g => g.id === groupId)
+        return exists
+          ? prev.map(g => g.id === groupId ? remote : g)
+          : [...prev, remote]
+      })
+    } else {
+      await hydrateSharedStore(wallet.address, [groupId])
+      refreshFromSharedStore(wallet.address)
+    }
+  }, [wallet.address, refreshFromSharedStore])
+
   return (
     <AjoContext.Provider value={{
       wallet, connecting, connectError, connect, disconnect, isConnected,
       myGroups, myAlerts, votes, vesting, contributions, withdrawals,
       createGroup, addMember, joinGroup, joinFromInvite, getInviteLink,
       contribute, withdrawPayout, withdrawVested, deleteGroup, dismissAlert,
-      castVote, createVote, getGroup, getGroupContributions, getGroupWithdrawals,
+      castVote, createVote, getGroup, getGroupContributions, getGroupWithdrawals, refreshGroup,
     }}>
       {children}
     </AjoContext.Provider>
