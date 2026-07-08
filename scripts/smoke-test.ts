@@ -77,6 +77,13 @@ const merged = mergeTwoGroups(local, registry)
 assert(merged.members.length === 3, 'merge keeps all members from registry')
 assert(allMembersContributed(merged) === false, 'not all contributed after new member joins')
 
+const joinMerge = mergeTwoGroups(
+  { ...baseGroup, members: [{ address: 'A', name: 'Alice', savedAmount: 50, hasContributed: false, hasReceived: false, joinedAt: '1' }] },
+  { ...baseGroup, members: [{ address: 'B', name: 'Bob', savedAmount: 50, hasContributed: false, hasReceived: false, joinedAt: '2' }] },
+)
+assert(joinMerge.members[0].address === 'A', 'join merge preserves creator order before new member')
+assert(joinMerge.members[1].address === 'B', 'join merge appends new member after creator')
+
 console.log('\nBackward compat')
 const legacy = normalizeGroup({ ...baseGroup, contributionMode: undefined as unknown as 'fixed', members: [{ address: 'A', name: 'A', savedAmount: undefined as unknown as number, hasContributed: false, hasReceived: false, joinedAt: '1' }] })
 assert(getMemberAmount(legacy, legacy.members[0]) === 50, 'legacy member gets group amount')
