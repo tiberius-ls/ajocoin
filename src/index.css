@@ -143,6 +143,7 @@
 
   .nav-link.active {
     color: var(--nimiq-green);
+    background: rgba(33, 188, 165, 0.12);
   }
 
   .wallet-chip {
@@ -160,5 +161,87 @@
   .progress-fill {
     @apply h-full rounded-full transition-all duration-500;
     background: var(--nimiq-green);
+  }
+
+  .stat-tile {
+    @apply card;
+    padding: 1.25rem !important;
+  }
+
+  .stat-label {
+    @apply nq-label text-on-card-muted block;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-value {
+    @apply nq-h3 text-on-card;
+  }
+
+  .card-inset {
+    background: var(--nimiq-highlight-bg, rgba(31, 35, 72, 0.06));
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    text-align: center;
+  }
+
+  .card-highlight-green {
+    background: rgba(33, 188, 165, 0.08);
+    border: 1px solid rgba(33, 188, 165, 0.2);
+  }
+
+  .card-highlight-gold {
+    background: rgba(233, 178, 19, 0.08);
+    border: 1px solid rgba(233, 178, 19, 0.22);
+  }
+
+  .badge {
+    @apply nq-text-s inline-flex items-center rounded-full;
+    font-size: 1rem;
+    padding: 0.25rem 0.75rem;
+  }
+
+  .badge-green {
+    @apply badge;
+    background: rgba(33, 188, 165, 0.12);
+    color: var(--nimiq-green);
+  }
+
+  .badge-gold {
+    @apply badge;
+    background: rgba(233, 178, 19, 0.14);
+    color: var(--nimiq-gold);
+  }
+
+  .vote-option {
+    @apply w-full text-left relative overflow-hidden transition-colors;
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid rgba(31, 35, 72, 0.1);
+    background: var(--nimiq-highlight-bg, rgba(31, 35, 72, 0.06));
+    color: rgba(31, 35, 72, 0.85);
+    cursor: pointer;
+  }
+
+  .vote-option:hover:not(:disabled) {
+    border-color: rgba(33, 188, 165, 0.35);
+  }
+
+  .vote-option.selected {
+    border-color: var(--nimiq-green);
+    background: rgba(33, 188, 165, 0.1);
+  }
+
+  .vote-option.disabled {
+    opacity: 0.65;
+    cursor: default;
+  }
+
+  .page-header {
+    margin-bottom: 0.5rem;
+  }
+
+  .page-header .nq-h1 {
+    color: rgba(255, 255, 255, 0.92);
   }
 }

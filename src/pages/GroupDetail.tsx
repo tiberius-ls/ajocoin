@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft, Check, Clock, Send, UserPlus, Share2, Copy, Wallet,
-  ArrowDownToLine, Trash2, AlertTriangle,
+  ArrowDownToLine, Trash2,
 } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import {
@@ -195,47 +195,47 @@ export default function GroupDetail() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="card !p-3">
-          <p className="nq-label text-on-card-muted">{flexible ? 'Savings range' : 'Per cycle'}</p>
-          <p className="nq-h3 nq-gold">{formatSavingsLabel(group)}</p>
+        <div className="stat-tile">
+          <p className="stat-label">{flexible ? 'Savings range' : 'Per cycle'}</p>
+          <p className="stat-value nq-gold">{formatSavingsLabel(group)}</p>
         </div>
-        <div className="card !p-3">
-          <p className="text-[10px] text-white/40 uppercase">Cycle</p>
-          <p className="text-base font-bold">{formatCycleLabel(group.cycleDays)}</p>
+        <div className="stat-tile">
+          <p className="stat-label">Cycle</p>
+          <p className="stat-value">{formatCycleLabel(group.cycleDays)}</p>
         </div>
-        <div className="card !p-3">
-          <p className="text-[10px] text-white/40 uppercase">Members</p>
-          <p className="text-base font-bold">{group.members.length}/{group.maxMembers}</p>
+        <div className="stat-tile">
+          <p className="stat-label">Members</p>
+          <p className="stat-value">{group.members.length}/{group.maxMembers}</p>
         </div>
-        <div className="card !p-3">
-          <p className="text-[10px] text-white/40 uppercase">Treasury</p>
-          <p className="text-base font-bold">{formatNim(treasuryBalance)}</p>
+        <div className="stat-tile">
+          <p className="stat-label">Treasury</p>
+          <p className="stat-value nq-green">{formatNim(treasuryBalance)}</p>
         </div>
       </div>
 
       {isMember && currentMember && (
-        <div className="card !p-3 bg-nimiq-green/5 border-nimiq-green/10">
-          <p className="text-[10px] text-white/40 uppercase">Your savings per cycle</p>
-          <p className="text-lg font-bold text-nimiq-green">{formatNim(myAmount)}</p>
+        <div className="card !p-3 card-highlight-green">
+          <p className="stat-label">Your savings per cycle</p>
+          <p className="nq-h2 nq-green">{formatNim(myAmount)}</p>
         </div>
       )}
 
       {isMember && recipient && group.status === 'active' && (
-        <div className={`card !p-3 flex items-center justify-between ${
-          isRecipient ? 'border-ajo-gold/30 bg-ajo-gold/5' : ''
+        <div className={`card !p-3 flex items-center justify-between gap-3 ${
+          isRecipient ? 'card-highlight-gold' : ''
         }`}>
           <div>
-            <p className="text-[10px] text-white/40 uppercase">Current recipient</p>
-            <p className="text-sm font-medium">{recipient.name}</p>
+            <p className="stat-label">Current recipient</p>
+            <p className="nq-text font-semibold text-on-card">{recipient.name}</p>
             {!allContributed && (
-              <p className="text-[10px] text-white/30 mt-0.5">
+              <p className="nq-text-s text-on-card-muted mt-0.5">
                 {group.members.filter(m => m.hasContributed).length}/{group.members.length} contributed
               </p>
             )}
           </div>
           {isRecipient && (
-            <span className="text-[10px] font-semibold text-ajo-gold bg-ajo-gold/10 px-2 py-1 rounded-full">
-              {allContributed ? 'Your turn!' : 'Your turn (pending contributions)'}
+            <span className="badge-gold shrink-0">
+              {allContributed ? 'Your turn!' : 'Your turn (pending)'}
             </span>
           )}
         </div>
@@ -273,11 +273,11 @@ export default function GroupDetail() {
       )}
 
       {isRecipient && allContributed && !isTreasurer && (
-        <div className="card !p-4 flex items-start gap-3 border-ajo-gold/20">
-          <AlertTriangle className="w-5 h-5 text-ajo-gold shrink-0 mt-0.5" />
+        <div className="nq-notice warning flex items-start gap-3">
+          <NimiqIcon name="alert-triangle" style={{ width: '1.75rem', height: '1.75rem', flexShrink: 0 }} />
           <div>
-            <p className="text-sm font-medium text-ajo-gold">It's your turn to receive!</p>
-            <p className="text-xs text-white/40 mt-1">
+            <p className="nq-label nq-gold">It's your turn to receive!</p>
+            <p className="nq-text" style={{ fontSize: '1.5rem' }}>
               {formatNim(payoutAmount)} is ready. The treasurer will release the payout to your wallet.
             </p>
           </div>
@@ -295,13 +295,13 @@ export default function GroupDetail() {
 
       {!isMember && group.members.length < group.maxMembers && group.status === 'active' && (
         <div className="card space-y-3">
-          <p className="text-sm font-medium flex items-center gap-2">
-            <UserPlus className="w-4 h-4 text-nimiq-green" /> Join this group
+          <p className="nq-h3 text-on-card flex items-center gap-2">
+            <UserPlus className="w-4 h-4 nq-green" /> Join this group
           </p>
           <input className="input-field" placeholder="Your display name" value={joinName} onChange={e => setJoinName(e.target.value)} />
           {flexible && (
             <div>
-              <label className="label">Your savings per cycle (NIM)</label>
+              <label className="label-on-card">Your savings per cycle (NIM)</label>
               <input
                 className="input-field"
                 type="number"
@@ -320,14 +320,14 @@ export default function GroupDetail() {
 
       {isCreator && group.members.length < group.maxMembers && group.status === 'active' && (
         <div className="card space-y-3">
-          <p className="text-sm font-medium flex items-center gap-2">
-            <UserPlus className="w-4 h-4 text-ajo-gold" /> Add member
+          <p className="nq-h3 text-on-card flex items-center gap-2">
+            <UserPlus className="w-4 h-4 nq-gold" /> Add member
           </p>
           <input className="input-field" placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
           <input className="input-field" placeholder="Nimiq address" value={memberAddress} onChange={e => setMemberAddress(e.target.value)} />
           {flexible && (
             <div>
-              <label className="label">Their savings per cycle (NIM)</label>
+              <label className="label-on-card">Their savings per cycle (NIM)</label>
               <input
                 className="input-field"
                 type="number"
@@ -347,20 +347,20 @@ export default function GroupDetail() {
       )}
 
       {isCreator && (
-        <div className="card space-y-3 border-red-400/10">
+        <div className="card space-y-3">
           {!showDeleteConfirm ? (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="w-full flex items-center justify-center gap-2 text-sm text-red-400 hover:text-red-300 py-2"
+              className="w-full flex items-center justify-center gap-2 nq-text-s nq-red py-2"
             >
               <Trash2 className="w-4 h-4" /> Delete group
             </button>
           ) : (
             <>
-              <p className="text-sm text-white/50 text-center">Delete this group permanently? This cannot be undone.</p>
+              <p className="nq-text text-on-card-muted text-center">Delete this group permanently? This cannot be undone.</p>
               <div className="flex gap-2">
                 <button onClick={() => setShowDeleteConfirm(false)} className="btn-secondary flex-1">Cancel</button>
-                <button onClick={handleDelete} disabled={deleting} className="flex-1 px-4 py-3 rounded-xl bg-red-500/20 text-red-400 font-semibold hover:bg-red-500/30">
+                <button onClick={handleDelete} disabled={deleting} className="nq-button red flex-1">
                   {deleting ? 'Deleting…' : 'Confirm delete'}
                 </button>
               </div>
@@ -380,7 +380,7 @@ export default function GroupDetail() {
                   <p className="nq-text font-semibold text-on-card">
                     {member.name}
                     {member.address === group.creatorAddress && (
-                      <span className="text-[10px] text-ajo-gold ml-1.5">Creator</span>
+                      <span className="nq-text-s nq-gold ml-1.5">Creator</span>
                     )}
                     {recipient?.address === member.address && !member.hasReceived && group.status === 'active' && (
                       <span className="text-[10px] text-nimiq-green ml-1.5">#{idx + 1} in line</span>

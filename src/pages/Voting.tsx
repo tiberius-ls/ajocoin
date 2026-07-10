@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Vote as VoteIcon, Plus, Check, Wallet } from 'lucide-react'
+import { Vote as VoteIcon, Wallet } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import EmptyState from '../components/EmptyState'
+import NimiqIcon from '../components/nimiq/NimiqIcon'
 import { formatDate } from '../lib/utils'
 
 export default function Voting() {
@@ -45,7 +46,7 @@ export default function Voting() {
             <button onClick={connect} disabled={connecting} className="btn-primary">
               {connecting ? 'Connecting…' : 'Connect Wallet'}
             </button>
-            {connectError && <p className="text-xs text-red-400">{connectError}</p>}
+            {connectError && <div className="nq-notice error w-full"><p className="nq-text">{connectError}</p></div>}
           </div>
         }
       />
@@ -54,14 +55,19 @@ export default function Voting() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold">Voting</h2>
-          <p className="text-sm text-white/40">Decisions in your groups</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="page-header" style={{ marginBottom: 0 }}>
+          <h2 className="nq-h1 text-on-blue">Voting</h2>
+          <p className="nq-text text-on-blue-muted">Decisions in your groups</p>
         </div>
         {myGroups.length > 0 && (
-          <button onClick={() => setShowForm(!showForm)} className="btn-secondary !px-3 !py-2 flex items-center gap-1.5 text-sm">
-            <Plus className="w-4 h-4" /> New
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="btn-secondary flex items-center gap-1.5 shrink-0"
+            style={{ padding: '0.75rem 1rem' }}
+          >
+            <NimiqIcon name="plus-circle" style={{ width: '1.25rem', height: '1.25rem' }} />
+            New
           </button>
         )}
       </div>
@@ -74,7 +80,7 @@ export default function Voting() {
           className="card space-y-4"
         >
           <div>
-            <label className="label">Group</label>
+            <label className="label-on-card">Group</label>
             <select className="input-field" value={groupId} onChange={e => setGroupId(e.target.value)} required>
               <option value="">Select a group</option>
               {myGroups.map(g => (
@@ -83,11 +89,11 @@ export default function Voting() {
             </select>
           </div>
           <div>
-            <label className="label">Proposal Title</label>
+            <label className="label-on-card">Proposal Title</label>
             <input className="input-field" value={title} onChange={e => setTitle(e.target.value)} required />
           </div>
           <div>
-            <label className="label">Description</label>
+            <label className="label-on-card">Description</label>
             <textarea className="input-field h-16 resize-none" value={description} onChange={e => setDescription(e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -122,10 +128,12 @@ export default function Voting() {
                 className="card space-y-4"
               >
                 <div>
-                  <p className="text-[10px] text-nimiq-green font-semibold uppercase">{group?.name}</p>
-                  <h3 className="font-semibold mt-1">{vote.title}</h3>
-                  {vote.description && <p className="text-xs text-white/40 mt-1">{vote.description}</p>}
-                  <p className="text-[10px] text-white/20 mt-2">{formatDate(vote.createdAt)} · {totalVotes} vote{totalVotes !== 1 ? 's' : ''}</p>
+                  <p className="nq-label nq-green">{group?.name}</p>
+                  <h3 className="nq-h3 text-on-card mt-1">{vote.title}</h3>
+                  {vote.description && <p className="nq-text-s text-on-card-muted mt-1">{vote.description}</p>}
+                  <p className="nq-text-s text-on-card-muted mt-2">
+                    {formatDate(vote.createdAt)} · {totalVotes} vote{totalVotes !== 1 ? 's' : ''}
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -138,21 +146,20 @@ export default function Voting() {
                         key={option.label}
                         onClick={() => !userVoted && castVote(vote.id, idx)}
                         disabled={userVoted}
-                        className={`w-full text-left rounded-xl px-4 py-3 border transition-colors relative overflow-hidden ${
-                          isUserChoice
-                            ? 'border-nimiq-green bg-nimiq-green/10'
-                            : userVoted
-                              ? 'border-white/5 bg-ajo-slate opacity-60'
-                              : 'border-white/10 bg-ajo-slate hover:border-nimiq-green/30'
-                        }`}
+                        className={`vote-option${isUserChoice ? ' selected' : ''}${userVoted && !isUserChoice ? ' disabled' : ''}`}
                       >
-                        <div className="absolute inset-y-0 left-0 bg-nimiq-green/10 transition-all" style={{ width: `${pct}%` }} />
-                        <div className="relative flex items-center justify-between">
-                          <span className="text-sm font-medium flex items-center gap-2">
-                            {isUserChoice && <Check className="w-3.5 h-3.5 text-nimiq-green" />}
+                        <div
+                          className="absolute inset-y-0 left-0 transition-all"
+                          style={{ width: `${pct}%`, background: 'rgba(33, 188, 165, 0.1)' }}
+                        />
+                        <div className="relative flex items-center justify-between gap-3">
+                          <span className="nq-text font-semibold flex items-center gap-2">
+                            {isUserChoice && (
+                              <NimiqIcon name="checkmark-small" className="nq-green" style={{ width: '1.25rem', height: '1.25rem' }} />
+                            )}
                             {option.label}
                           </span>
-                          <span className="text-xs text-white/40">{option.votes.length} ({pct}%)</span>
+                          <span className="nq-text-s text-on-card-muted">{option.votes.length} ({pct}%)</span>
                         </div>
                       </button>
                     )

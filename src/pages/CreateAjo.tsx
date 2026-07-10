@@ -148,7 +148,7 @@ export default function CreateAjo() {
             <div>
               <label className="label-on-card">Your savings amount (NIM)</label>
               <input className="input-field" type="number" min="0.01" step="0.01" value={creatorAmount} onChange={e => setCreatorAmount(e.target.value)} required />
-              <p className="text-[11px] text-white/30 mt-1">How much you will save each cycle</p>
+              <p className="nq-text-s text-on-card-muted mt-1">How much you will save each cycle</p>
             </div>
           </>
         )}

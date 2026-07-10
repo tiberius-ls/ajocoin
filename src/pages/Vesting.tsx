@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Lock, ArrowDownToLine, Clock, Wallet } from 'lucide-react'
+import { Lock, Wallet } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import EmptyState from '../components/EmptyState'
+import NimiqIcon from '../components/nimiq/NimiqIcon'
 import { formatNim, formatDate, vestingProgress, daysBetween } from '../lib/utils'
 
 export default function Vesting() {
@@ -23,7 +24,7 @@ export default function Vesting() {
             <button onClick={connect} disabled={connecting} className="btn-primary">
               {connecting ? 'Connecting…' : 'Connect Wallet'}
             </button>
-            {connectError && <p className="text-xs text-red-400">{connectError}</p>}
+            {connectError && <div className="nq-notice error w-full"><p className="nq-text">{connectError}</p></div>}
           </div>
         }
       />
@@ -42,13 +43,13 @@ export default function Vesting() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold">Vesting</h2>
-        <p className="text-sm text-white/40">Withdraw your vested payouts</p>
+      <div className="page-header">
+        <h2 className="nq-h1 text-on-blue">Vesting</h2>
+        <p className="nq-text text-on-blue-muted">Withdraw your vested payouts</p>
       </div>
 
       {message && (
-        <div className="text-sm text-nimiq-green bg-nimiq-green/10 rounded-xl px-4 py-3">{message}</div>
+        <div className="nq-notice success"><p className="nq-text">{message}</p></div>
       )}
 
       {myVesting.length === 0 ? (
@@ -78,43 +79,47 @@ export default function Vesting() {
                 transition={{ delay: i * 0.05 }}
                 className="card space-y-4"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[10px] text-ajo-gold font-semibold uppercase">{schedule.groupName}</p>
-                    <h3 className="font-semibold mt-0.5">{formatNim(schedule.totalAmount)} locked</h3>
+                    <p className="nq-label nq-gold">{schedule.groupName}</p>
+                    <h3 className="nq-h3 text-on-card mt-0.5">{formatNim(schedule.totalAmount)} locked</h3>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-nimiq-green">{formatNim(remaining)}</p>
-                    <p className="text-[10px] text-white/30">available</p>
+                    <p className="nq-h2 nq-green">{formatNim(remaining)}</p>
+                    <p className="nq-text-s text-on-card-muted">available</p>
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-xs text-white/40 mb-1.5">
+                  <div className="flex justify-between nq-text-s text-on-card-muted mb-1.5">
                     <span>{formatNim(schedule.releasedAmount)} withdrawn</span>
                     <span>{progress}%</span>
                   </div>
-                  <div className="h-2 bg-ajo-slate rounded-full overflow-hidden">
+                  <div className="progress-track" style={{ height: '0.5rem' }}>
                     <div
-                      className="h-full bg-gradient-to-r from-ajo-gold to-nimiq-green rounded-full transition-all duration-700"
-                      style={{ width: `${progress}%` }}
+                      className="progress-fill"
+                      style={{
+                        width: `${progress}%`,
+                        background: 'linear-gradient(90deg, var(--nimiq-gold), var(--nimiq-green))',
+                      }}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-ajo-slate rounded-xl py-2">
-                    <p className="text-[10px] text-white/30 uppercase">Cliff</p>
-                    <p className="text-sm font-semibold">{schedule.cliffDays}d</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="card-inset">
+                    <p className="stat-label" style={{ marginBottom: '0.15rem' }}>Cliff</p>
+                    <p className="nq-text font-semibold text-on-card">{schedule.cliffDays}d</p>
                   </div>
-                  <div className="bg-ajo-slate rounded-xl py-2">
-                    <p className="text-[10px] text-white/30 uppercase">Start</p>
-                    <p className="text-sm font-semibold">{formatDate(schedule.startDate)}</p>
+                  <div className="card-inset">
+                    <p className="stat-label" style={{ marginBottom: '0.15rem' }}>Start</p>
+                    <p className="nq-text font-semibold text-on-card">{formatDate(schedule.startDate)}</p>
                   </div>
-                  <div className="bg-ajo-slate rounded-xl py-2">
-                    <p className="text-[10px] text-white/30 uppercase">Ends</p>
-                    <p className="text-sm font-semibold flex items-center justify-center gap-1">
-                      <Clock className="w-3 h-3" /> {daysLeft}d
+                  <div className="card-inset">
+                    <p className="stat-label" style={{ marginBottom: '0.15rem' }}>Ends</p>
+                    <p className="nq-text font-semibold text-on-card flex items-center justify-center gap-1">
+                      <NimiqIcon name="stopwatch" style={{ width: '1.25rem', height: '1.25rem' }} />
+                      {daysLeft}d
                     </p>
                   </div>
                 </div>
@@ -125,15 +130,15 @@ export default function Vesting() {
                     disabled={withdrawingId === schedule.id}
                     className="btn-gold w-full flex items-center justify-center gap-2"
                   >
-                    <ArrowDownToLine className="w-4 h-4" />
+                    <NimiqIcon name="download" style={{ width: '1.25rem', height: '1.25rem' }} />
                     {withdrawingId === schedule.id ? 'Withdrawing…' : `Withdraw ${formatNim(chunk)}`}
                   </button>
                 ) : remaining > 0 && !isTreasurer ? (
-                  <p className="text-xs text-white/30 text-center">Treasurer will release vested funds to your wallet</p>
+                  <p className="nq-text-s text-on-card-muted text-center">Treasurer will release vested funds to your wallet</p>
                 ) : remaining > 0 ? (
-                  <p className="text-xs text-white/30 text-center">Cliff period not reached yet</p>
+                  <p className="nq-text-s text-on-card-muted text-center">Cliff period not reached yet</p>
                 ) : (
-                  <p className="text-xs text-nimiq-green text-center">Fully withdrawn</p>
+                  <p className="nq-text-s nq-green text-center">Fully withdrawn</p>
                 )}
               </motion.div>
             )

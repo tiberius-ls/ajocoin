@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, LayoutDashboard, Vote, Lock, LogOut } from 'lucide-react'
+import { Home, Vote } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import { shortenAddress } from '../lib/utils'
 import TurnAlerts from './TurnAlerts'
@@ -7,12 +7,12 @@ import NimiqLogo from './nimiq/NimiqLogo'
 import NimiqIcon from './nimiq/NimiqIcon'
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Home' },
-  { to: '/create', icon: PlusCircle, label: 'Create' },
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Groups' },
-  { to: '/voting', icon: Vote, label: 'Votes' },
-  { to: '/vesting', icon: Lock, label: 'Vesting' },
-]
+  { to: '/', icon: 'lucide', lucide: Home, label: 'Home' },
+  { to: '/create', icon: 'plus-circle', label: 'Create' },
+  { to: '/dashboard', icon: 'contacts', label: 'Groups' },
+  { to: '/voting', icon: 'lucide', lucide: Vote, label: 'Votes' },
+  { to: '/vesting', icon: 'keys', label: 'Vesting' },
+] as const
 
 export default function Layout() {
   const { wallet, connecting, connect, disconnect, isConnected } = useAjo()
@@ -20,26 +20,28 @@ export default function Layout() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <NimiqLogo />
 
           {isConnected ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               <div className="wallet-chip">
                 <NimiqIcon name="hexagon" className="nq-green" style={{ width: '1.25rem', height: '1.25rem' }} />
-                <span>{shortenAddress(wallet.address!)}</span>
+                <span className="nq-text-s mono-address" style={{ fontSize: '1.25rem' }}>
+                  {shortenAddress(wallet.address!)}
+                </span>
               </div>
               <button
                 onClick={disconnect}
                 className="nq-button-s light-blue"
                 title="Disconnect"
-                style={{ padding: '0.75rem' }}
+                style={{ padding: '0.75rem', minWidth: 0 }}
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <NimiqIcon name="login" style={{ width: '1.25rem', height: '1.25rem', transform: 'scaleX(-1)' }} />
               </button>
             </div>
           ) : (
-            <button onClick={connect} disabled={connecting} className="nq-button-s green">
+            <button onClick={connect} disabled={connecting} className="nq-button-s green shrink-0">
               {connecting ? 'Connecting…' : 'Connect'}
             </button>
           )}
@@ -53,15 +55,19 @@ export default function Layout() {
 
       <nav className="app-nav">
         <div className="max-w-lg mx-auto flex justify-around px-2 py-2">
-          {navItems.map(({ to, icon: Icon, label }) => (
+          {navItems.map(({ to, icon, label, ...rest }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/'}
               className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="nq-text-s" style={{ fontSize: '1.25rem' }}>{label}</span>
+              {'lucide' in rest && rest.lucide ? (
+                <rest.lucide className="w-5 h-5" />
+              ) : (
+                <NimiqIcon name={icon} style={{ width: '2rem', height: '2rem' }} />
+              )}
+              <span className="nq-text-s" style={{ fontSize: '1.1rem' }}>{label}</span>
             </NavLink>
           ))}
         </div>

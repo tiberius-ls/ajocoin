@@ -11,10 +11,15 @@ export default function NimiqLogo({ compact = false }: NimiqLogoProps) {
       <NimiqIcon name="hexagon" className="nq-gold" style={{ width: '2.25rem', height: '2.25rem' }} />
       {!compact && (
         <div>
-          <p className="font-bold uppercase text-white leading-tight" style={{ letterSpacing: '0.08em', fontSize: '1.35rem' }}>
+          <p
+            className="font-bold uppercase text-white leading-tight"
+            style={{ letterSpacing: '0.08em', fontSize: '1.5rem', lineHeight: 1.1 }}
+          >
             AjoCoin
           </p>
-          <p className="text-on-blue-muted nq-text-s leading-tight" style={{ fontSize: '1.25rem' }}>Group savings on Nimiq</p>
+          <p className="text-on-blue-muted nq-text-s leading-tight" style={{ fontSize: '1.15rem', marginTop: '0.1rem' }}>
+            Group savings on Nimiq
+          </p>
         </div>
       )}
     </div>
