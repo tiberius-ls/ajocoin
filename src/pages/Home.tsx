@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { PlusCircle, Shield, Users, Zap, ArrowRight, Wallet } from 'lucide-react'
+import { PlusCircle, Shield, Users, Zap, ArrowRight } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import AjoCard from '../components/AjoCard'
+import NimiqIcon from '../components/nimiq/NimiqIcon'
 
 const features = [
   { icon: Users, title: 'Group Savings', desc: 'Create ajo circles with trusted members' },
@@ -18,27 +19,25 @@ export default function Home() {
       <motion.section
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-nimiq-green/20 via-ajo-card to-ajo-gold/10 border border-white/5 p-6"
+        className="card relative overflow-hidden"
       >
         <div className="relative z-10">
-          <p className="text-ajo-gold text-xs font-semibold uppercase tracking-wider mb-2">Decentralized Ajo</p>
-          <h2 className="text-2xl font-bold leading-tight mb-2">
-            Save together,<br />grow together
-          </h2>
-          <p className="text-sm text-white/50 mb-5 max-w-xs">
+          <p className="nq-label nq-gold mb-2">Decentralized Ajo</p>
+          <h2 className="nq-h1 text-on-card mb-2">Save together,<br />grow together</h2>
+          <p className="nq-text text-on-card-muted mb-5 max-w-xs">
             Connect your Nimiq wallet to create groups, invite members, contribute, and withdraw — your data, your groups.
           </p>
 
           {!isConnected ? (
             <div className="space-y-3">
               <button onClick={connect} disabled={connecting} className="btn-primary inline-flex items-center gap-2">
-                <Wallet className="w-4 h-4" />
+                <NimiqIcon name="login" style={{ width: '1.5rem', height: '1.5rem' }} />
                 {connecting ? 'Connecting…' : 'Connect Wallet'}
               </button>
               {connectError && (
-                <p className="text-xs text-red-400">{connectError}</p>
+                <div className="nq-notice error"><p className="nq-text">{connectError}</p></div>
               )}
-              <p className="text-[11px] text-white/30">Open in Nimiq Pay to use your wallet</p>
+              <p className="nq-text-s text-on-card-muted">Open in Nimiq Pay to use your wallet</p>
             </div>
           ) : (
             <Link to="/create" className="btn-primary inline-flex items-center gap-2">
@@ -48,12 +47,10 @@ export default function Home() {
             </Link>
           )}
         </div>
-
-        <div className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-nimiq-green/10 blur-2xl" />
       </motion.section>
 
       <section>
-        <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-3">How it works</h3>
+        <h3 className="nq-label text-on-blue mb-3">How it works</h3>
         <div className="grid gap-3">
           {features.map(({ icon: Icon, title, desc }, i) => (
             <motion.div
@@ -61,14 +58,14 @@ export default function Home() {
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="card flex items-center gap-4 !p-4"
+              className="card flex items-center gap-4 !py-4 !px-4"
             >
-              <div className="w-10 h-10 rounded-xl bg-nimiq-green/10 flex items-center justify-center shrink-0">
-                <Icon className="w-5 h-5 text-nimiq-green" />
+              <div className="nq-green-bg flex items-center justify-center shrink-0" style={{ width: '3rem', height: '3rem', borderRadius: '0.75rem' }}>
+                <Icon className="w-5 h-5 nq-green" />
               </div>
               <div>
-                <p className="font-medium text-sm">{title}</p>
-                <p className="text-xs text-white/40">{desc}</p>
+                <p className="nq-h3 text-on-card">{title}</p>
+                <p className="nq-text-s text-on-card-muted">{desc}</p>
               </div>
             </motion.div>
           ))}
@@ -78,8 +75,8 @@ export default function Home() {
       {isConnected && myGroups.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider">Your Groups</h3>
-            <Link to="/dashboard" className="text-xs text-nimiq-green font-medium">View all</Link>
+            <h3 className="nq-label text-on-blue">Your Groups</h3>
+            <Link to="/dashboard" className="nq-link nq-text-s">View all</Link>
           </div>
           <div className="space-y-3">
             {myGroups.slice(0, 2).map(group => (
@@ -91,8 +88,8 @@ export default function Home() {
 
       {isConnected && myGroups.length === 0 && (
         <div className="card text-center !py-8">
-          <p className="text-sm text-white/40 mb-4">No groups yet. Create one or join via an invite link.</p>
-          <Link to="/create" className="btn-secondary inline-flex items-center gap-2 text-sm">
+          <p className="nq-text text-on-card-muted mb-4">No groups yet. Create one or join via an invite link.</p>
+          <Link to="/create" className="btn-secondary inline-flex items-center gap-2">
             <PlusCircle className="w-4 h-4" /> Create your first group
           </Link>
         </div>

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
-import { UserPlus, Wallet } from 'lucide-react'
+import { UserPlus } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import { parseInviteParam } from '../lib/storage'
 import { formatNim, formatCycleLabel } from '../lib/utils'
+import NimiqIcon from '../components/nimiq/NimiqIcon'
 
 export default function JoinGroup() {
   const [params] = useSearchParams()
@@ -42,8 +43,8 @@ export default function JoinGroup() {
   if (!invite) {
     return (
       <div className="text-center py-20 px-6">
-        <p className="text-white/40 mb-4">Invalid or missing invite link</p>
-        <Link to="/" className="text-nimiq-green text-sm">← Go home</Link>
+        <p className="nq-text text-on-blue-muted mb-4">Invalid or missing invite link</p>
+        <Link to="/" className="nq-link nq-text-s">← Go home</Link>
       </div>
     )
   }
@@ -55,14 +56,14 @@ export default function JoinGroup() {
   return (
     <div className="space-y-6 max-w-md mx-auto">
       <div className="text-center">
-        <h2 className="text-xl font-bold">Join Ajo Group</h2>
-        <p className="text-sm text-white/40 mt-1">You've been invited to a savings circle</p>
+        <h2 className="nq-h1 text-on-blue">Join Ajo Group</h2>
+        <p className="nq-text text-on-blue-muted mt-1">You've been invited to a savings circle</p>
       </div>
 
       <div className="card space-y-3">
-        <h3 className="font-semibold text-lg">{invite.name}</h3>
-        <p className="text-sm text-white/50">{invite.description}</p>
-        <div className="flex flex-wrap gap-3 text-xs text-white/40 pt-2 border-t border-white/5">
+        <h3 className="nq-h2">{invite.name}</h3>
+        <p className="nq-text text-on-card-muted">{invite.description}</p>
+        <div className="flex flex-wrap gap-3 nq-text-s text-on-card-muted pt-2" style={{ borderTop: '1px solid rgba(31,35,72,0.08)' }}>
           <span>{savingsLabel}</span>
           <span>{formatCycleLabel(invite.cycleDays)}</span>
           <span>Up to {invite.maxMembers} members</span>
@@ -71,29 +72,25 @@ export default function JoinGroup() {
 
       {!isConnected ? (
         <div className="card text-center space-y-4">
-          <Wallet className="w-8 h-8 text-nimiq-green mx-auto" />
-          <p className="text-sm text-white/50">Connect your Nimiq wallet to join this group</p>
-          {connectError && (
-            <p className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2">{connectError}</p>
-          )}
+          <NimiqIcon name="login" className="nq-green mx-auto" style={{ width: '2.5rem', height: '2.5rem' }} />
+          <p className="nq-text text-on-card-muted">Connect your Nimiq wallet to join this group</p>
+          {connectError && <div className="nq-notice error"><p className="nq-text">{connectError}</p></div>}
           <button onClick={connect} disabled={connecting} className="btn-primary w-full">
             {connecting ? 'Connecting…' : 'Connect Wallet'}
           </button>
         </div>
       ) : (
         <div className="card space-y-4">
-          <p className="text-sm font-medium flex items-center gap-2">
-            <UserPlus className="w-4 h-4 text-nimiq-green" /> Join as a member
+          <p className="nq-h3 flex items-center gap-2">
+            <UserPlus className="w-4 h-4 nq-green" /> Join as a member
           </p>
           <div>
-            <label className="label">Your display name</label>
+            <label className="label-on-card">Your display name</label>
             <input className="input-field" placeholder="e.g. Ada" value={name} onChange={e => setName(e.target.value)} />
           </div>
           {isFlexible && (
             <div>
-              <label className="label">
-                Your savings per cycle (NIM)
-              </label>
+              <label className="label-on-card">Your savings per cycle (NIM)</label>
               <input
                 className="input-field"
                 type="number"
@@ -105,12 +102,12 @@ export default function JoinGroup() {
                 onChange={e => setSavedAmount(e.target.value)}
                 onFocus={() => { if (!savedAmount) setSavedAmount(defaultAmount) }}
               />
-              <p className="text-[11px] text-white/30 mt-1">
+              <p className="nq-text-s text-on-card-muted mt-1">
                 Choose between {formatNim(invite.minContribution)} and {formatNim(invite.maxContribution)}
               </p>
             </div>
           )}
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <div className="nq-notice error"><p className="nq-text">{error}</p></div>}
           <button onClick={handleJoin} disabled={joining || !name.trim()} className="btn-primary w-full">
             {joining ? 'Joining…' : 'Join Group'}
           </button>

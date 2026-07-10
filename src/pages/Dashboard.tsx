@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { PlusCircle, Users, Wallet } from 'lucide-react'
+import { Users } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import AjoCard from '../components/AjoCard'
 import EmptyState from '../components/EmptyState'
 import { formatNim } from '../lib/utils'
+import NimiqIcon from '../components/nimiq/NimiqIcon'
 
 export default function Dashboard() {
   const { isConnected, connecting, connect, connectError, myGroups, contributions, withdrawals, wallet } = useAjo()
@@ -20,7 +21,7 @@ export default function Dashboard() {
   if (!isConnected) {
     return (
       <EmptyState
-        icon={Wallet}
+        icon={Users}
         title="Connect your wallet"
         description="Link your Nimiq wallet to see and manage your ajo groups."
         action={
@@ -28,7 +29,7 @@ export default function Dashboard() {
             <button onClick={connect} disabled={connecting} className="btn-primary">
               {connecting ? 'Connecting…' : 'Connect Wallet'}
             </button>
-            {connectError && <p className="text-xs text-red-400">{connectError}</p>}
+            {connectError && <div className="nq-notice error w-full"><p className="nq-text">{connectError}</p></div>}
           </div>
         }
       />
@@ -38,13 +39,13 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold">My Groups</h2>
-        <p className="text-sm text-white/40">Groups you've created or joined</p>
+        <h2 className="nq-h1 text-on-blue">My Groups</h2>
+        <p className="nq-text text-on-blue-muted">Groups you've created or joined</p>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Groups', value: myGroups.length },
+          { label: 'Groups', value: String(myGroups.length) },
           { label: 'Contributed', value: formatNim(totalContributed) },
           { label: 'Withdrawn', value: formatNim(totalWithdrawn) },
         ].map((stat, i) => (
@@ -55,8 +56,8 @@ export default function Dashboard() {
             transition={{ delay: i * 0.05 }}
             className="card !p-3 text-center"
           >
-            <p className="text-lg font-bold text-nimiq-green">{stat.value}</p>
-            <p className="text-[10px] text-white/40 uppercase tracking-wider">{stat.label}</p>
+            <p className="nq-h2 nq-green">{stat.value}</p>
+            <p className="nq-label text-on-card-muted" style={{ fontSize: '1rem' }}>{stat.label}</p>
           </motion.div>
         ))}
       </div>
@@ -68,7 +69,7 @@ export default function Dashboard() {
           description="Create your first ajo group or ask a friend to share their invite link."
           action={
             <Link to="/create" className="btn-primary inline-flex items-center gap-2">
-              <PlusCircle className="w-4 h-4" />
+              <NimiqIcon name="plus-circle" style={{ width: '1.25rem', height: '1.25rem' }} />
               Create Group
             </Link>
           }

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { Bell, X } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
+import NimiqIcon from './nimiq/NimiqIcon'
 
 export default function TurnAlerts() {
   const { myAlerts, dismissAlert } = useAjo()
@@ -15,31 +15,29 @@ export default function TurnAlerts() {
         return (
           <div
             key={alert.id}
-            className={`rounded-xl px-4 py-3 flex items-start gap-3 border ${
-              isUrgent
-                ? 'bg-ajo-gold/10 border-ajo-gold/30'
-                : 'bg-nimiq-green/10 border-nimiq-green/20'
-            }`}
+            className={`nq-notice ${isUrgent ? 'warning' : 'info'} flex items-start gap-3`}
+            style={{ borderRadius: '1rem' }}
           >
-            <Bell className={`w-4 h-4 mt-0.5 shrink-0 ${isUrgent ? 'text-ajo-gold' : 'text-nimiq-green'}`} />
+            <NimiqIcon
+              name={isUrgent ? 'alert-triangle' : 'info-circle'}
+              style={{ width: '1.75rem', height: '1.75rem', flexShrink: 0, marginTop: '0.15rem' }}
+            />
             <div className="flex-1 min-w-0">
-              <p className={`text-xs font-semibold uppercase ${isUrgent ? 'text-ajo-gold' : 'text-nimiq-green'}`}>
+              <p className="nq-label" style={{ marginBottom: '0.25rem' }}>
                 {alert.type === 'ready_to_withdraw' ? 'Your turn to withdraw' : 'Up next'}
               </p>
-              <p className="text-sm mt-0.5">{alert.message}</p>
-              <Link
-                to={`/group/${alert.groupId}`}
-                className="text-xs text-white/50 hover:text-white mt-1 inline-block"
-              >
+              <p className="nq-text" style={{ fontSize: '1.5rem' }}>{alert.message}</p>
+              <Link to={`/group/${alert.groupId}`} className="nq-link nq-text-s" style={{ marginTop: '0.5rem', display: 'inline-block' }}>
                 View {alert.groupName} →
               </Link>
             </div>
             <button
               onClick={() => dismissAlert(alert.id)}
-              className="p-1 rounded-lg hover:bg-white/5 shrink-0"
+              className="nq-button-s light-blue"
+              style={{ padding: '0.5rem', minWidth: 0 }}
               aria-label="Dismiss"
             >
-              <X className="w-3.5 h-3.5 text-white/40" />
+              <NimiqIcon name="close" style={{ width: '1.25rem', height: '1.25rem' }} />
             </button>
           </div>
         )

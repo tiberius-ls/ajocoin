@@ -12,6 +12,8 @@ import {
   isTreasuryHolder, getRoundPayout, shareLink, formatSavingsLabel,
   formatCycleLabel, getMemberAmount, isFlexibleGroup,
 } from '../lib/utils'
+import Identicon from '../components/nimiq/Identicon'
+import NimiqIcon from '../components/nimiq/NimiqIcon'
 
 export default function GroupDetail() {
   const { id } = useParams<{ id: string }>()
@@ -43,11 +45,11 @@ export default function GroupDetail() {
 
   if (!isConnected) {
     return (
-      <div className="text-center py-20 px-6">
-        <Wallet className="w-10 h-10 text-nimiq-green mx-auto mb-4" />
-        <h2 className="text-lg font-bold mb-2">Wallet required</h2>
-        <p className="text-sm text-white/40 mb-6">Connect your Nimiq wallet to view and manage this group.</p>
-        {connectError && <p className="text-sm text-red-400 mb-4">{connectError}</p>}
+      <div className="card text-center py-12 px-6">
+        <Wallet className="w-10 h-10 nq-green mx-auto mb-4" />
+        <h2 className="nq-h2 mb-2">Wallet required</h2>
+        <p className="nq-text text-on-card-muted mb-6">Connect your Nimiq wallet to view and manage this group.</p>
+        {connectError && <div className="nq-notice error mb-4"><p className="nq-text">{connectError}</p></div>}
         <button onClick={connect} disabled={connecting} className="btn-primary">
           {connecting ? 'Connecting…' : 'Connect Wallet'}
         </button>
@@ -58,8 +60,8 @@ export default function GroupDetail() {
   if (!group) {
     return (
       <div className="text-center py-20">
-        <p className="text-white/40 mb-4">Group not found</p>
-        <Link to="/dashboard" className="text-nimiq-green text-sm">← Back to groups</Link>
+        <p className="nq-text text-on-blue-muted mb-4">Group not found</p>
+        <Link to="/dashboard" className="nq-link nq-text-s">← Back to groups</Link>
       </div>
     )
   }
@@ -172,17 +174,17 @@ export default function GroupDetail() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      <Link to="/dashboard" className="inline-flex items-center gap-1 text-sm text-white/40 hover:text-white transition-colors">
+      <Link to="/dashboard" className="nq-link nq-text-s inline-flex items-center gap-1">
         <ArrowLeft className="w-4 h-4" /> Back
       </Link>
 
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold">{group.name}</h2>
-          <p className="text-sm text-white/40 mt-1">{group.description}</p>
+          <h2 className="nq-h1 text-on-blue">{group.name}</h2>
+          <p className="nq-text text-on-blue-muted mt-1">{group.description}</p>
         </div>
-        <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full shrink-0 ${
-          group.status === 'completed' ? 'bg-white/10 text-white/50' : 'bg-nimiq-green/20 text-nimiq-green'
+        <span className={`nq-label shrink-0 px-2 py-0.5 rounded-full ${
+          group.status === 'completed' ? 'nq-gray-bg text-on-card-muted' : 'nq-green-bg nq-green'
         }`}>
           {group.status === 'completed' ? 'Done' : `Round ${group.currentRound}`}
         </span>
@@ -190,8 +192,8 @@ export default function GroupDetail() {
 
       <div className="grid grid-cols-2 gap-2">
         <div className="card !p-3">
-          <p className="text-[10px] text-white/40 uppercase">{flexible ? 'Savings range' : 'Per cycle'}</p>
-          <p className="text-base font-bold text-ajo-gold">{formatSavingsLabel(group)}</p>
+          <p className="nq-label text-on-card-muted">{flexible ? 'Savings range' : 'Per cycle'}</p>
+          <p className="nq-h3 nq-gold">{formatSavingsLabel(group)}</p>
         </div>
         <div className="card !p-3">
           <p className="text-[10px] text-white/40 uppercase">Cycle</p>
@@ -235,8 +237,8 @@ export default function GroupDetail() {
         </div>
       )}
 
-      {message && <div className="text-sm text-nimiq-green bg-nimiq-green/10 rounded-xl px-4 py-3">{message}</div>}
-      {error && <div className="text-sm text-red-400 bg-red-400/10 rounded-xl px-4 py-3">{error}</div>}
+      {message && <div className="nq-notice success"><p className="nq-text">{message}</p></div>}
+      {error && <div className="nq-notice error"><p className="nq-text">{error}</p></div>}
 
       {isMember && inviteLink && (
         <div className="flex gap-2">
@@ -258,11 +260,11 @@ export default function GroupDetail() {
       )}
 
       {isMember && currentMember?.hasContributed && !canReleasePayout && group.status === 'active' && (
-        <div className="flex items-center gap-2 text-sm text-nimiq-green bg-nimiq-green/10 rounded-xl px-4 py-3">
-          <Check className="w-4 h-4" /> You've contributed this round
-          {isRecipient && !allContributed && (
-            <span className="text-white/40">— waiting for other members</span>
-          )}
+        <div className="nq-notice success flex items-center gap-2">
+          <NimiqIcon name="checkmark" style={{ width: '1.5rem', height: '1.5rem' }} />
+          <p className="nq-text">You've contributed this round
+            {isRecipient && !allContributed && ' — waiting for other members'}
+          </p>
         </div>
       )}
 
@@ -364,16 +366,14 @@ export default function GroupDetail() {
       )}
 
       <section>
-        <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-3">Members</h3>
+        <h3 className="nq-label text-on-blue mb-3">Members</h3>
         <div className="space-y-2">
           {group.members.map((member, idx) => (
             <div key={member.address} className="card !p-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-ajo-slate flex items-center justify-center text-xs font-bold">
-                  {member.name[0]}
-                </div>
+                <Identicon seed={member.address} size={32} />
                 <div>
-                  <p className="text-sm font-medium">
+                  <p className="nq-text font-semibold text-on-card">
                     {member.name}
                     {member.address === group.creatorAddress && (
                       <span className="text-[10px] text-ajo-gold ml-1.5">Creator</span>
@@ -382,7 +382,7 @@ export default function GroupDetail() {
                       <span className="text-[10px] text-nimiq-green ml-1.5">#{idx + 1} in line</span>
                     )}
                   </p>
-                  <p className="text-[10px] text-white/30">
+                  <p className="nq-text-s mono-address text-on-card-muted">
                     {shortenAddress(member.address)} · {formatNim(getMemberAmount(group, member))}/cycle
                   </p>
                 </div>
@@ -403,7 +403,7 @@ export default function GroupDetail() {
 
       {(groupContributions.length > 0 || groupWithdrawals.length > 0) && (
         <section>
-          <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-3">Activity</h3>
+          <h3 className="nq-label text-on-blue mb-3">Activity</h3>
           <div className="space-y-2">
             {[...groupContributions, ...groupWithdrawals]
               .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())

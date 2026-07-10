@@ -5,24 +5,21 @@ export default {
     extend: {
       colors: {
         nimiq: {
-          green: '#0CA98B',
-          'green-dark': '#088F74',
-          'green-light': '#12C9A6',
-        },
-        ajo: {
-          gold: '#F5A623',
-          'gold-dark': '#D4891A',
-          navy: '#0F1729',
-          slate: '#1A2332',
-          card: '#1E2A3A',
+          blue: '#1F2348',
+          'light-blue': '#0582CA',
+          gold: '#E9B213',
+          green: '#21BCA5',
+          orange: '#FC8702',
+          red: '#D94432',
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Muli', 'system-ui', 'sans-serif'],
+        mono: ['Fira Mono', 'monospace'],
       },
       animation: {
-        'fade-in': 'fadeIn 0.4s ease-out',
-        'slide-up': 'slideUp 0.4s ease-out',
+        'fade-in': 'fadeIn 0.4s cubic-bezier(0.25, 0, 0, 1)',
+        'slide-up': 'slideUp 0.4s cubic-bezier(0.25, 0, 0, 1)',
       },
       keyframes: {
         fadeIn: {
