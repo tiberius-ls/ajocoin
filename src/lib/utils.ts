@@ -177,6 +177,14 @@ export function isConfirmedContribution(c: Contribution): boolean {
   return !c.status || c.status === 'confirmed'
 }
 
+export function isPendingContribution(c: Contribution): boolean {
+  return c.status === 'pending'
+}
+
+export function contributionStatusLabel(c: Contribution): string {
+  return isPendingContribution(c) ? 'Confirming' : 'Confirmed'
+}
+
 export function getTreasuryBalance(
   groupId: string,
   contributions: Contribution[],

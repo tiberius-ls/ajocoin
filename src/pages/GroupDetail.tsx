@@ -11,6 +11,7 @@ import {
   getCurrentRecipient, allMembersContributed, isGroupCreator,
   isTreasuryHolder, getRoundPayout, shareLink, formatSavingsLabel,
   formatCycleLabel, getMemberAmount, isFlexibleGroup,
+  isPendingContribution, contributionStatusLabel,
 } from '../lib/utils'
 import Identicon from '../components/nimiq/Identicon'
 import NimiqIcon from '../components/nimiq/NimiqIcon'
@@ -106,10 +107,13 @@ export default function GroupDetail() {
     const result = await withdrawPayout(group.id)
     setWithdrawing(false)
     if (result.success) {
+      const chunkMsg = result.releasedAmount
+        ? `${formatNim(result.releasedAmount)} sent now — remainder vests on the Vesting page.`
+        : ''
       const msg = result.nextRecipient
-        ? `Payout released! ${result.nextRecipient} is up next and has been notified.`
-        : `Payout of ${formatNim(payoutAmount)} released successfully!`
-      setMessage(msg)
+        ? `Payout released! ${chunkMsg} ${result.nextRecipient} is up next and has been notified.`
+        : `Payout released! ${chunkMsg}`
+      setMessage(msg.trim())
     } else {
       setError(result.error ?? 'Withdrawal failed')
     }
@@ -389,11 +393,17 @@ export default function GroupDetail() {
               </div>
               <div className="flex items-center gap-1.5">
                 {member.hasReceived ? (
-                  <span className="text-[10px] text-ajo-gold">Received</span>
+                  <span className="nq-text-s nq-gold">Received</span>
                 ) : member.hasContributed ? (
-                  <span className="text-[10px] text-nimiq-green flex items-center gap-1"><Check className="w-3 h-3" /> Paid</span>
+                  <span className="nq-text-s nq-green flex items-center gap-1"><Check className="w-3 h-3" /> Paid</span>
+                ) : groupContributions.some(c =>
+                  c.memberAddress === member.address
+                  && c.round === group.currentRound
+                  && isPendingContribution(c)
+                ) ? (
+                  <span className="nq-text-s nq-orange flex items-center gap-1"><Clock className="w-3 h-3" /> Confirming</span>
                 ) : (
-                  <span className="text-[10px] text-white/30 flex items-center gap-1"><Clock className="w-3 h-3" /> Pending</span>
+                  <span className="nq-text-s text-on-card-muted flex items-center gap-1"><Clock className="w-3 h-3" /> Pending</span>
                 )}
               </div>
             </div>
@@ -410,19 +420,33 @@ export default function GroupDetail() {
               .slice(0, 6)
               .map(item => {
                 const isWithdrawal = 'type' in item
+                const contrib = !isWithdrawal ? item as typeof groupContributions[0] : null
+                const pending = contrib && isPendingContribution(contrib)
                 return (
                   <div key={item.id} className="card !p-3 flex items-center justify-between text-sm">
                     <div>
-                      <p className={`font-medium ${isWithdrawal ? 'text-ajo-gold' : 'text-nimiq-green'}`}>
+                      <p className={`nq-text font-semibold ${isWithdrawal ? 'nq-gold' : 'nq-green'}`}>
                         {isWithdrawal ? '−' : '+'} {formatNim(item.amount)}
                       </p>
-                      <p className="text-[10px] text-white/30">
+                      <p className="nq-text-s text-on-card-muted">
                         {isWithdrawal
                           ? `${(item as typeof groupWithdrawals[0]).type} withdrawal`
-                          : `Contribution · Round ${(item as typeof groupContributions[0]).round}`}
+                          : `Contribution · Round ${contrib!.round}`}
                       </p>
+                      {contrib?.txHash && (
+                        <p className="nq-text-s mono-address text-on-card-muted mt-0.5">
+                          {shortenAddress(contrib.txHash)}
+                        </p>
+                      )}
                     </div>
-                    <span className="text-[10px] text-white/30">{formatDate(item.timestamp)}</span>
+                    <div className="text-right">
+                      {!isWithdrawal && (
+                        <span className={`nq-label ${pending ? 'nq-orange' : 'nq-green'}`} style={{ fontSize: '1rem' }}>
+                          {contrib ? contributionStatusLabel(contrib) : 'Confirmed'}
+                        </span>
+                      )}
+                      <p className="nq-text-s text-on-card-muted mt-0.5">{formatDate(item.timestamp)}</p>
+                    </div>
                   </div>
                 )
               })}

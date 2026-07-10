@@ -39,7 +39,7 @@ interface AjoContextValue {
   joinFromInvite: (inviteParam: string, memberName: string, savedAmount?: number) => { success: boolean; error?: string }
   getInviteLink: (groupId: string) => string | null
   contribute: (groupId: string) => Promise<{ success: boolean; error?: string; pending?: boolean }>
-  withdrawPayout: (groupId: string) => Promise<{ success: boolean; error?: string; nextRecipient?: string }>
+  withdrawPayout: (groupId: string) => Promise<{ success: boolean; error?: string; nextRecipient?: string; releasedAmount?: number }>
   withdrawVested: (vestingId: string) => Promise<{ success: boolean; error?: string }>
   deleteGroup: (groupId: string) => { success: boolean; error?: string }
   dismissAlert: (alertId: string) => void
@@ -133,9 +133,85 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     return Array.from(merged.values())
   }, [])
 
+  const syncActivityFromCache = useCallback((groupIds: string[]) => {
+    const contribs: Contribution[] = []
+    const withdraws: Withdrawal[] = []
+    for (const gid of groupIds) {
+      const activity = getGroupActivity(gid)
+      contribs.push(...activity.contributions)
+      withdraws.push(...activity.withdrawals)
+    }
+    setContributions(contribs)
+    setWithdrawals(withdraws)
+  }, [])
+
   const refreshFromSharedStore = useCallback((address: string) => {
-    setGroups(prev => mergeGroupsFromRegistry(prev, address))
-  }, [mergeGroupsFromRegistry])
+    setGroups(prev => {
+      syncActivityFromCache(prev.map(g => g.id))
+      return mergeGroupsFromRegistry(prev, address)
+    })
+  }, [mergeGroupsFromRegistry, syncActivityFromCache])
+
+  const maybeNotifyAllContributed = useCallback((group: AjoGroup) => {
+    if (!allMembersContributed(group)) return
+
+    const recipient = getCurrentRecipient(group)
+    if (!recipient) return
+
+    const alreadyNotified = loadGlobalAlerts().some(a =>
+      a.groupId === group.id
+      && a.round === group.currentRound
+      && a.type === 'ready_to_withdraw'
+    )
+    if (alreadyNotified) return
+
+    const allContribs = getGroupActivity(group.id).contributions
+    const payout = getRoundPayout(group, allContribs, group.currentRound)
+
+    addGlobalAlert(createTurnAlert(
+      group,
+      recipient,
+      'ready_to_withdraw',
+      group.currentRound,
+      isTreasuryHolder(group, recipient.address)
+        ? `All members contributed! Release your ${payout} NIM payout from the treasury.`
+        : `It's your turn! All members contributed — ${payout} NIM is ready for you once the treasurer releases it.`
+    ))
+
+    const treasurer = group.members.find(m => m.address === group.treasuryAddress)
+    if (treasurer && treasurer.address !== recipient.address) {
+      addGlobalAlert(createTurnAlert(
+        group,
+        treasurer,
+        'ready_to_withdraw',
+        group.currentRound,
+        `All members contributed in round ${group.currentRound}. Release ${payout} NIM to ${recipient.name}.`
+      ))
+    }
+
+    refreshAlerts()
+  }, [refreshAlerts])
+
+  const createVestingForPayout = useCallback((
+    group: AjoGroup,
+    recipient: AjoGroup['members'][0],
+    payoutAmount: number,
+    releasedChunk: number,
+  ): VestingSchedule => {
+    const cliffDays = Math.min(7, Math.max(1, Math.floor(group.cycleDays / 4)))
+    return {
+      id: generateId(),
+      groupId: group.id,
+      groupName: group.name,
+      memberAddress: recipient.address,
+      memberName: recipient.name,
+      totalAmount: payoutAmount,
+      releasedAmount: releasedChunk,
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + group.cycleDays * 86_400_000).toISOString(),
+      cliffDays,
+    }
+  }, [])
 
   const loadUserState = useCallback(async (address: string) => {
     const state = loadState(address)
@@ -177,13 +253,42 @@ export function AjoProvider({ children }: { children: ReactNode }) {
 
     const groupIds = groups.map(g => g.id)
     startSharedStorePolling(wallet.address, groupIds)
-    const unsub = onSharedStoreUpdate(() => refreshFromSharedStore(wallet.address!))
+    const unsub = onSharedStoreUpdate(() => {
+      refreshFromSharedStore(wallet.address!)
+      syncActivityFromCache(groupIds)
+    })
 
     return () => {
       stopSharedStorePolling()
       unsub()
     }
-  }, [wallet.address, groups.map(g => g.id).join(','), refreshFromSharedStore])
+  }, [wallet.address, groups.map(g => g.id).join(','), refreshFromSharedStore, syncActivityFromCache])
+
+  useEffect(() => {
+    if (!wallet.address || groups.length === 0) return
+
+    const pending = groups.flatMap(g =>
+      getGroupActivity(g.id).contributions.filter(c => c.status === 'pending')
+    )
+    if (pending.length === 0) return
+
+    const confirmPending = async () => {
+      for (const c of pending) {
+        await retryConfirmContribution(c.id, c.groupId)
+      }
+      refreshFromSharedStore(wallet.address!)
+      syncActivityFromCache(groups.map(g => g.id))
+
+      for (const g of groups) {
+        const merged = getGroupFromRegistry(g.id) ?? g
+        maybeNotifyAllContributed(merged)
+      }
+    }
+
+    void confirmPending()
+    const timer = setInterval(() => void confirmPending(), 8000)
+    return () => clearInterval(timer)
+  }, [wallet.address, groups, refreshFromSharedStore, syncActivityFromCache, maybeNotifyAllContributed])
 
   const connect = useCallback(async () => {
     setConnecting(true)
@@ -396,6 +501,9 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       void retryConfirmContribution(saved.id, groupId).then(confirmed => {
         if (confirmed?.status === 'confirmed') {
           refreshFromSharedStore(wallet.address!)
+          syncActivityFromCache([groupId])
+          const merged = getGroupFromRegistry(groupId) ?? group
+          maybeNotifyAllContributed(merged)
         }
       })
       return { success: true, pending: true }
@@ -408,40 +516,10 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       ),
     }
     persistGroup(updated, setGroups)
-
-    if (allMembersContributed(updated)) {
-      const recipient = getCurrentRecipient(updated)
-      if (recipient) {
-        const allContribs = getGroupActivity(groupId).contributions
-        const payout = getRoundPayout(updated, allContribs, updated.currentRound)
-
-        addGlobalAlert(createTurnAlert(
-          updated,
-          recipient,
-          'ready_to_withdraw',
-          updated.currentRound,
-          isTreasuryHolder(updated, recipient.address)
-            ? `All members contributed! Release your ${payout} NIM payout from the treasury.`
-            : `It's your turn! All members contributed — ${payout} NIM is ready for you once the treasurer releases it.`
-        ))
-
-        const treasurer = updated.members.find(m => m.address === updated.treasuryAddress)
-        if (treasurer && treasurer.address !== recipient.address) {
-          addGlobalAlert(createTurnAlert(
-            updated,
-            treasurer,
-            'ready_to_withdraw',
-            updated.currentRound,
-            `All members contributed in round ${updated.currentRound}. Release ${payout} NIM to ${recipient.name}.`
-          ))
-        }
-
-        refreshAlerts()
-      }
-    }
+    maybeNotifyAllContributed(updated)
 
     return { success: true }
-  }, [wallet.address, groups, refreshAlerts, refreshFromSharedStore])
+  }, [wallet.address, groups, refreshFromSharedStore, syncActivityFromCache, maybeNotifyAllContributed])
 
   const withdrawPayout = useCallback(async (groupId: string) => {
     if (!wallet.address) return { success: false, error: 'Connect your wallet first' }
@@ -468,8 +546,12 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       return { success: false, error: `Insufficient treasury balance (${balance} NIM available, ${payoutAmount} NIM needed)` }
     }
 
-    const result = await sendTransaction(recipient.address, payoutAmount)
+    const firstChunk = Math.min(payoutAmount, payoutAmount * 0.25)
+    const result = await sendTransaction(recipient.address, firstChunk)
     if (!result.success) return { success: false, error: result.error }
+
+    const vestingSchedule = createVestingForPayout(group, recipient, payoutAmount, firstChunk)
+    setVesting(prev => [...prev, vestingSchedule])
 
     const updatedMembers = group.members.map(m =>
       m.address === recipient.address
@@ -490,7 +572,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       id: generateId(),
       groupId,
       memberAddress: recipient.address,
-      amount: payoutAmount,
+      amount: firstChunk,
       round: group.currentRound,
       type: 'payout',
       txHash: result.txHash,
@@ -535,8 +617,8 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       refreshAlerts()
     }
 
-    return { success: true, nextRecipient: nextRecipientName }
-  }, [wallet.address, groups, refreshAlerts, getGroupContributions, getGroupWithdrawals])
+    return { success: true, nextRecipient: nextRecipientName, releasedAmount: firstChunk }
+  }, [wallet.address, groups, refreshAlerts, getGroupContributions, getGroupWithdrawals, createVestingForPayout])
 
   const withdrawVested = useCallback(async (vestingId: string) => {
     if (!wallet.address) return { success: false, error: 'Connect your wallet first' }
@@ -669,7 +751,8 @@ export function AjoProvider({ children }: { children: ReactNode }) {
       await hydrateSharedStore(wallet.address, [groupId])
       refreshFromSharedStore(wallet.address)
     }
-  }, [wallet.address, refreshFromSharedStore])
+    syncActivityFromCache([groupId])
+  }, [wallet.address, refreshFromSharedStore, syncActivityFromCache])
 
   return (
     <AjoContext.Provider value={{
