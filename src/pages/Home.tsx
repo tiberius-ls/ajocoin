@@ -15,16 +15,16 @@ export default function Home() {
   const { isConnected, connecting, connect, connectError, myGroups } = useAjo()
 
   return (
-    <div className="space-y-8">
+    <div className="page">
       <motion.section
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="card relative overflow-hidden"
+        className="nq-surface-pad relative overflow-hidden"
       >
         <div className="relative z-10">
-          <p className="nq-label nq-gold mb-2">Decentralized Ajo</p>
-          <h2 className="nq-h1 text-on-card mb-2">Save together,<br />grow together</h2>
-          <p className="nq-text text-on-card-muted mb-5 max-w-xs">
+          <p className="nq-label nq-gold mb-3">Decentralized Ajo</p>
+          <h2 className="nq-h1 text-on-card mb-3">Save together,<br />grow together</h2>
+          <p className="nq-text text-on-card-muted mb-6">
             Connect your Nimiq wallet to create groups, invite members, contribute, and withdraw — your data, your groups.
           </p>
 
@@ -50,18 +50,18 @@ export default function Home() {
       </motion.section>
 
       <section>
-        <h3 className="nq-label text-on-blue mb-3">How it works</h3>
-        <div className="grid gap-3">
+        <h3 className="section-title">How it works</h3>
+        <div className="grid gap-4">
           {features.map(({ icon: Icon, title, desc }, i) => (
             <motion.div
               key={title}
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="card flex items-center gap-4 !py-4 !px-4"
+              className="card flex items-center gap-5"
             >
-              <div className="nq-green-bg flex items-center justify-center shrink-0" style={{ width: '3rem', height: '3rem', borderRadius: '0.75rem' }}>
-                <Icon className="w-5 h-5 nq-green" />
+              <div className="nq-green-bg flex items-center justify-center shrink-0" style={{ width: '5rem', height: '5rem', borderRadius: '1rem' }}>
+                <Icon className="nq-green" style={{ width: '2.5rem', height: '2.5rem' }} />
               </div>
               <div>
                 <p className="nq-h3 text-on-card">{title}</p>
@@ -75,7 +75,7 @@ export default function Home() {
       {isConnected && myGroups.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="nq-label text-on-blue">Your Groups</h3>
+            <h3 className="section-title" style={{ marginBottom: 0 }}>Your Groups</h3>
             <Link to="/dashboard" className="nq-link nq-text-s">View all</Link>
           </div>
           <div className="space-y-3">
@@ -87,7 +87,7 @@ export default function Home() {
       )}
 
       {isConnected && myGroups.length === 0 && (
-        <div className="card text-center !py-8">
+        <div className="nq-surface-pad text-center">
           <p className="nq-text text-on-card-muted mb-4">No groups yet. Create one or join via an invite link.</p>
           <Link to="/create" className="btn-secondary inline-flex items-center gap-2">
             <PlusCircle className="w-4 h-4" /> Create your first group

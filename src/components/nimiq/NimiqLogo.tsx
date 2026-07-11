@@ -12,12 +12,12 @@ export default function NimiqLogo({ compact = false }: NimiqLogoProps) {
       {!compact && (
         <div>
           <p
-            className="font-bold uppercase text-white leading-tight"
-            style={{ letterSpacing: '0.08em', fontSize: '1.5rem', lineHeight: 1.1 }}
+            className="nq-h3 font-bold uppercase text-white leading-tight"
+            style={{ letterSpacing: '0.08em' }}
           >
             AjoCoin
           </p>
-          <p className="text-on-blue-muted nq-text-s leading-tight" style={{ fontSize: '1.15rem', marginTop: '0.1rem' }}>
+          <p className="text-on-blue-muted nq-text-s leading-tight mt-1">
             Group savings on Nimiq
           </p>
         </div>

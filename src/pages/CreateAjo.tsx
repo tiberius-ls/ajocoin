@@ -96,7 +96,7 @@ export default function CreateAjo() {
       <h2 className="nq-h1 text-on-blue mb-1">Create Ajo Group</h2>
       <p className="nq-text text-on-blue-muted mb-6">Set the savings rules for your group</p>
 
-      <form onSubmit={handleSubmit} className="card space-y-5">
+      <form onSubmit={handleSubmit} className="nq-surface-pad space-y-6">
         <div>
           <label className="label-on-card">Group Name</label>
           <input className="input-field" placeholder="e.g. Lagos Tech Ajo" value={name} onChange={e => setName(e.target.value)} required />

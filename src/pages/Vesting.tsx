@@ -42,7 +42,7 @@ export default function Vesting() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page">
       <div className="page-header">
         <h2 className="nq-h1 text-on-blue">Vesting</h2>
         <p className="nq-text text-on-blue-muted">Withdraw your vested payouts</p>

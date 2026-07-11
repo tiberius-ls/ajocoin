@@ -177,7 +177,7 @@ export default function GroupDetail() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="page">
       <Link to="/dashboard" className="nq-link nq-text-s inline-flex items-center gap-1">
         <ArrowLeft className="w-4 h-4" /> Back
       </Link>
@@ -214,14 +214,14 @@ export default function GroupDetail() {
       </div>
 
       {isMember && currentMember && (
-        <div className="card !p-3 card-highlight-green">
+        <div className="card-compact card-highlight-green">
           <p className="stat-label">Your savings per cycle</p>
           <p className="nq-h2 nq-green">{formatNim(myAmount)}</p>
         </div>
       )}
 
       {isMember && recipient && group.status === 'active' && (
-        <div className={`card !p-3 flex items-center justify-between gap-3 ${
+        <div className={`card-compact flex items-center justify-between gap-4 ${
           isRecipient ? 'card-highlight-gold' : ''
         }`}>
           <div>
@@ -277,7 +277,7 @@ export default function GroupDetail() {
           <NimiqIcon name="alert-triangle" style={{ width: '1.75rem', height: '1.75rem', flexShrink: 0 }} />
           <div>
             <p className="nq-label nq-gold">It's your turn to receive!</p>
-            <p className="nq-text" style={{ fontSize: '1.5rem' }}>
+            <p className="nq-text">
               {formatNim(payoutAmount)} is ready. The treasurer will release the payout to your wallet.
             </p>
           </div>
@@ -373,7 +373,7 @@ export default function GroupDetail() {
         <h3 className="nq-label text-on-blue mb-3">Members</h3>
         <div className="space-y-2">
           {group.members.map((member, idx) => (
-            <div key={member.address} className="card !p-3 flex items-center justify-between">
+            <div key={member.address} className="card-compact flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Identicon seed={member.address} size={32} />
                 <div>
@@ -423,7 +423,7 @@ export default function GroupDetail() {
                 const contrib = !isWithdrawal ? item as typeof groupContributions[0] : null
                 const pending = contrib && isPendingContribution(contrib)
                 return (
-                  <div key={item.id} className="card !p-3 flex items-center justify-between text-sm">
+                  <div key={item.id} className="card-compact flex items-center justify-between">
                     <div>
                       <p className={`nq-text font-semibold ${isWithdrawal ? 'nq-gold' : 'nq-green'}`}>
                         {isWithdrawal ? '−' : '+'} {formatNim(item.amount)}
@@ -441,7 +441,7 @@ export default function GroupDetail() {
                     </div>
                     <div className="text-right">
                       {!isWithdrawal && (
-                        <span className={`nq-label ${pending ? 'nq-orange' : 'nq-green'}`} style={{ fontSize: '1rem' }}>
+                        <span className={`nq-label ${pending ? 'nq-orange' : 'nq-green'}`}>
                           {contrib ? contributionStatusLabel(contrib) : 'Confirmed'}
                         </span>
                       )}

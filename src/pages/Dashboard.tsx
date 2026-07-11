@@ -37,7 +37,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page">
       <div>
         <h2 className="nq-h1 text-on-blue">My Groups</h2>
         <p className="nq-text text-on-blue-muted">Groups you've created or joined</p>
@@ -54,10 +54,10 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className="card !p-3 text-center"
+            className="stat-tile text-center"
           >
             <p className="nq-h2 nq-green">{stat.value}</p>
-            <p className="nq-label text-on-card-muted" style={{ fontSize: '1rem' }}>{stat.label}</p>
+            <p className="stat-label">{stat.label}</p>
           </motion.div>
         ))}
       </div>

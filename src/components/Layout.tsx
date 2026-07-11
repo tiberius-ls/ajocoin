@@ -27,7 +27,7 @@ export default function Layout() {
             <div className="flex items-center gap-1.5 shrink-0">
               <div className="wallet-chip">
                 <NimiqIcon name="hexagon" className="nq-green" style={{ width: '1.25rem', height: '1.25rem' }} />
-                <span className="nq-text-s mono-address" style={{ fontSize: '1.25rem' }}>
+                <span className="nq-text-s mono-address">
                   {shortenAddress(wallet.address!)}
                 </span>
               </div>
@@ -54,7 +54,7 @@ export default function Layout() {
       </main>
 
       <nav className="app-nav">
-        <div className="max-w-lg mx-auto flex justify-around px-2 py-2">
+        <div className="max-w-lg mx-auto flex justify-around px-3 py-3">
           {navItems.map(({ to, icon, label, ...rest }) => (
             <NavLink
               key={to}
@@ -67,7 +67,7 @@ export default function Layout() {
               ) : (
                 <NimiqIcon name={icon} style={{ width: '2rem', height: '2rem' }} />
               )}
-              <span className="nq-text-s" style={{ fontSize: '1.1rem' }}>{label}</span>
+              <span className="nq-text-s">{label}</span>
             </NavLink>
           ))}
         </div>

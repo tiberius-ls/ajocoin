@@ -54,7 +54,7 @@ export default function JoinGroup() {
     : `${formatNim(invite.contributionAmount)}/cycle`
 
   return (
-    <div className="space-y-6 max-w-md mx-auto">
+    <div className="page max-w-md mx-auto">
       <div className="text-center">
         <h2 className="nq-h1 text-on-blue">Join Ajo Group</h2>
         <p className="nq-text text-on-blue-muted mt-1">You've been invited to a savings circle</p>

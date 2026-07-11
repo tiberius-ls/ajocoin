@@ -14,6 +14,8 @@
     @apply antialiased;
     min-height: 100dvh;
     font-family: 'Muli', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 2rem;
+    line-height: 1.5;
     background: var(--nimiq-blue-bg, radial-gradient(100% 100% at bottom right, #260133, #1f2348));
     color: rgba(255, 255, 255, 0.9);
   }
@@ -24,13 +26,13 @@
 }
 
 @layer components {
-  /* Nimiq surface on blue gradient */
   .app-shell {
-    @apply flex flex-col min-h-dvh max-w-lg mx-auto;
+    @apply flex flex-col min-h-dvh w-full max-w-lg mx-auto;
   }
 
   .app-header {
-    @apply sticky top-0 z-50 px-4 py-3;
+    @apply sticky top-0 z-50;
+    padding: 2rem 2.5rem;
     background: rgba(31, 35, 72, 0.72);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -41,14 +43,15 @@
     background: rgba(31, 35, 72, 0.92);
     backdrop-filter: blur(12px);
     border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
   .app-main {
-    @apply flex-1 px-4 py-5;
-    padding-bottom: 6.5rem;
+    @apply flex-1 w-full;
+    padding: 2.5rem 2.5rem 10rem;
   }
 
-  /* White Nimiq cards on blue background */
+  /* Nimiq white surfaces — wallet-style generous padding */
   .nq-surface {
     background: var(--nimiq-card-bg, #fff);
     border-radius: 1.25rem;
@@ -58,25 +61,48 @@
 
   .nq-surface-pad {
     @apply nq-surface;
-    padding: 2rem;
+    padding: 3.5rem;
   }
 
   .nq-surface-sm {
     @apply nq-surface;
-    padding: 1.5rem;
+    padding: 3rem;
   }
 
   .card {
     @apply nq-surface-sm;
   }
 
+  .card-compact {
+    @apply nq-surface;
+    padding: 2.5rem;
+  }
+
+  .page {
+    @apply w-full space-y-8;
+  }
+
+  .page-header {
+    margin-bottom: 1rem;
+  }
+
+  .page-header .nq-h1,
+  .page-header h2.nq-h1 {
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .section-title {
+    @apply nq-label text-on-blue block;
+    margin-bottom: 1.5rem;
+  }
+
   .label {
-    @apply nq-label mb-1 block;
+    @apply nq-label mb-2 block;
     color: rgba(255, 255, 255, 0.75);
   }
 
   .label-on-card {
-    @apply nq-label mb-1 block;
+    @apply nq-label mb-2 block;
     color: rgba(31, 35, 72, 0.7);
   }
 
@@ -136,7 +162,10 @@
   }
 
   .nav-link {
-    @apply flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors;
+    @apply flex flex-col items-center transition-colors;
+    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
     color: rgba(255, 255, 255, 0.45);
     text-decoration: none;
   }
@@ -147,14 +176,18 @@
   }
 
   .wallet-chip {
-    @apply flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl mono-address;
+    @apply flex items-center mono-address;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-radius: 1rem;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(33, 188, 165, 0.35);
     color: #fff;
   }
 
   .progress-track {
-    @apply flex-1 h-1.5 rounded-full overflow-hidden;
+    @apply flex-1 rounded-full overflow-hidden;
+    height: 0.75rem;
     background: rgba(31, 35, 72, 0.1);
   }
 
@@ -164,14 +197,12 @@
   }
 
   .stat-tile {
-    @apply card;
-    padding: 1.25rem !important;
+    @apply card-compact;
   }
 
   .stat-label {
     @apply nq-label text-on-card-muted block;
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
   }
 
   .stat-value {
@@ -180,8 +211,8 @@
 
   .card-inset {
     background: var(--nimiq-highlight-bg, rgba(31, 35, 72, 0.06));
-    border-radius: 0.75rem;
-    padding: 0.75rem;
+    border-radius: 1rem;
+    padding: 1.5rem;
     text-align: center;
   }
 
@@ -197,8 +228,7 @@
 
   .badge {
     @apply nq-text-s inline-flex items-center rounded-full;
-    font-size: 1rem;
-    padding: 0.25rem 0.75rem;
+    padding: 0.5rem 1.25rem;
   }
 
   .badge-green {
@@ -215,8 +245,8 @@
 
   .vote-option {
     @apply w-full text-left relative overflow-hidden transition-colors;
-    border-radius: 0.75rem;
-    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    padding: 1.5rem 2rem;
     border: 1px solid rgba(31, 35, 72, 0.1);
     background: var(--nimiq-highlight-bg, rgba(31, 35, 72, 0.06));
     color: rgba(31, 35, 72, 0.85);
@@ -237,11 +267,8 @@
     cursor: default;
   }
 
-  .page-header {
-    margin-bottom: 0.5rem;
-  }
-
-  .page-header .nq-h1 {
-    color: rgba(255, 255, 255, 0.92);
+  /* Notices on blue background (outside cards) */
+  .app-main .nq-notice {
+    border-radius: 1rem;
   }
 }

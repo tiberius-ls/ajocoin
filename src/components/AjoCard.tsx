@@ -23,7 +23,7 @@ export default function AjoCard({ group }: AjoCardProps) {
         </div>
         <span className={`nq-text-s uppercase px-2 py-0.5 rounded-full ${
           group.status === 'active' ? 'nq-green-bg nq-green' : 'nq-gray-bg text-on-card-muted'
-        }`} style={{ fontSize: '1.1rem', padding: '0.25rem 0.75rem', borderRadius: '999px' }}>
+        }`}>
           {group.status}
         </span>
       </div>

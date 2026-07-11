@@ -54,7 +54,7 @@ export default function Voting() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page">
       <div className="flex items-center justify-between gap-3">
         <div className="page-header" style={{ marginBottom: 0 }}>
           <h2 className="nq-h1 text-on-blue">Voting</h2>

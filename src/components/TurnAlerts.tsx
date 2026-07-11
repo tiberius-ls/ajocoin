@@ -26,8 +26,8 @@ export default function TurnAlerts() {
               <p className="nq-label" style={{ marginBottom: '0.25rem' }}>
                 {alert.type === 'ready_to_withdraw' ? 'Your turn to withdraw' : 'Up next'}
               </p>
-              <p className="nq-text" style={{ fontSize: '1.5rem' }}>{alert.message}</p>
-              <Link to={`/group/${alert.groupId}`} className="nq-link nq-text-s" style={{ marginTop: '0.5rem', display: 'inline-block' }}>
+              <p className="nq-text">{alert.message}</p>
+              <Link to={`/group/${alert.groupId}`} className="nq-link nq-text-s mt-2 inline-block">
                 View {alert.groupName} →
               </Link>
             </div>
