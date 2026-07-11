@@ -12,7 +12,7 @@ import Vesting from './pages/Vesting'
 export default function App() {
   return (
     <AjoProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/join" element={<JoinGroup />} />
           <Route element={<Layout />}>

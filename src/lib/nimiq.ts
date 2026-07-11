@@ -20,8 +20,17 @@ function isErrorResponse(result: unknown): result is ErrorResponse {
 export async function connectWallet(): Promise<WalletState> {
   const locale = getHostLanguage() ?? navigator.language.split('-')[0] ?? 'en'
 
-  provider = await init({ timeout: 10000 })
-  await provider.connect()
+  try {
+    provider = await init({ timeout: 10000 })
+  } catch {
+    throw new Error('Unable to initialize the Nimiq provider. Open the app inside Nimiq Pay for wallet actions.')
+  }
+
+  try {
+    await provider.connect()
+  } catch {
+    throw new Error('Wallet connection was cancelled or unavailable. Please retry inside Nimiq Pay.')
+  }
 
   const accountsResult = await provider.listAccounts()
   if (isErrorResponse(accountsResult)) {
@@ -30,7 +39,7 @@ export async function connectWallet(): Promise<WalletState> {
 
   const accounts = accountsResult as string[]
   const address = accounts[0] ?? null
-  if (!address) throw new Error('No Nimiq account found')
+  if (!address) throw new Error('No Nimiq account found. Open the app in Nimiq Pay and allow account access.')
 
   return {
     status: 'connected',
@@ -46,7 +55,7 @@ export async function sendTransaction(
   amountNim: number
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   if (!provider?.connected) {
-    return { success: false, error: 'Wallet not connected' }
+    return { success: false, error: 'Wallet not connected. Open the app inside Nimiq Pay to send real transactions.' }
   }
 
   try {

@@ -50,6 +50,22 @@ export default function Home() {
       </motion.section>
 
       <section>
+        <h3 className="section-title">Why this fits the competition</h3>
+        <div className="grid gap-3 md:grid-cols-3">
+          {[
+            { title: 'Real Nimiq flow', desc: 'Wallet connection plus real NIM transfers for contributions and payouts.' },
+            { title: 'Mini-app UX', desc: 'Fast onboarding, clear group actions, and built-in invite sharing.' },
+            { title: 'Strong use case', desc: 'Ajo circles are intuitive, social, and naturally suited to decentralized savings.' },
+          ].map((item) => (
+            <div key={item.title} className="card">
+              <p className="nq-h3 text-on-card">{item.title}</p>
+              <p className="nq-text-s text-on-card-muted mt-1">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
         <h3 className="section-title">How it works</h3>
         <div className="grid gap-4">
           {features.map(({ icon: Icon, title, desc }, i) => (
