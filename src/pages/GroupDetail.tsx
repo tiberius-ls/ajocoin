@@ -46,8 +46,8 @@ export default function GroupDetail() {
 
   if (!isConnected) {
     return (
-      <div className="card text-center py-12 px-6">
-        <Wallet className="w-10 h-10 nq-green mx-auto mb-4" />
+      <div className="nq-surface-pad flex flex-col items-start">
+        <Wallet className="nq-green mb-4" style={{ width: '4rem', height: '4rem' }} />
         <h2 className="nq-h2 mb-2">Wallet required</h2>
         <p className="nq-text text-on-card-muted mb-6">Connect your Nimiq wallet to view and manage this group.</p>
         {connectError && <div className="nq-notice error mb-4"><p className="nq-text">{connectError}</p></div>}

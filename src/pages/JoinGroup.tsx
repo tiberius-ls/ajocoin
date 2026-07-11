@@ -54,8 +54,8 @@ export default function JoinGroup() {
     : `${formatNim(invite.contributionAmount)}/cycle`
 
   return (
-    <div className="page max-w-md mx-auto">
-      <div className="text-center">
+    <div className="page">
+      <div className="page-header">
         <h2 className="nq-h1 text-on-blue">Join Ajo Group</h2>
         <p className="nq-text text-on-blue-muted mt-1">You've been invited to a savings circle</p>
       </div>
@@ -71,8 +71,8 @@ export default function JoinGroup() {
       </div>
 
       {!isConnected ? (
-        <div className="card text-center space-y-4">
-          <NimiqIcon name="login" className="nq-green mx-auto" style={{ width: '2.5rem', height: '2.5rem' }} />
+        <div className="nq-surface-pad space-y-4">
+          <NimiqIcon name="login" className="nq-green" style={{ width: '3rem', height: '3rem' }} />
           <p className="nq-text text-on-card-muted">Connect your Nimiq wallet to join this group</p>
           {connectError && <div className="nq-notice error"><p className="nq-text">{connectError}</p></div>}
           <button onClick={connect} disabled={connecting} className="btn-primary w-full">

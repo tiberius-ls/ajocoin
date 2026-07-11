@@ -54,7 +54,7 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className="stat-tile text-center"
+            className="stat-tile"
           >
             <p className="nq-h2 nq-green">{stat.value}</p>
             <p className="stat-label">{stat.label}</p>

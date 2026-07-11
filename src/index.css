@@ -27,15 +27,19 @@
 
 @layer components {
   .app-shell {
-    @apply flex flex-col min-h-dvh w-full max-w-lg mx-auto;
+    @apply flex flex-col min-h-dvh w-full;
   }
 
   .app-header {
-    @apply sticky top-0 z-50;
-    padding: 2rem 2.5rem;
+    @apply sticky top-0 z-50 w-full;
+    padding: 2rem;
     background: rgba(31, 35, 72, 0.72);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .app-header-inner {
+    @apply flex items-center justify-between gap-3 w-full;
   }
 
   .app-nav {
@@ -48,7 +52,7 @@
 
   .app-main {
     @apply flex-1 w-full;
-    padding: 2.5rem 2.5rem 10rem;
+    padding: 2rem 2rem 9rem;
   }
 
   /* Nimiq white surfaces — wallet-style generous padding */
@@ -60,13 +64,13 @@
   }
 
   .nq-surface-pad {
-    @apply nq-surface;
-    padding: 3.5rem;
+    @apply nq-surface w-full;
+    padding: 2.5rem;
   }
 
   .nq-surface-sm {
-    @apply nq-surface;
-    padding: 3rem;
+    @apply nq-surface w-full;
+    padding: 2.5rem;
   }
 
   .card {
@@ -74,12 +78,13 @@
   }
 
   .card-compact {
-    @apply nq-surface;
-    padding: 2.5rem;
+    @apply nq-surface w-full;
+    padding: 2rem;
   }
 
   .page {
-    @apply w-full space-y-8;
+    @apply w-full flex flex-col;
+    gap: 2rem;
   }
 
   .page-header {

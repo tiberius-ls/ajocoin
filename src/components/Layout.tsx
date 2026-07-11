@@ -20,7 +20,7 @@ export default function Layout() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="flex items-center justify-between gap-3">
+        <div className="app-header-inner">
           <NimiqLogo />
 
           {isConnected ? (
@@ -54,7 +54,7 @@ export default function Layout() {
       </main>
 
       <nav className="app-nav">
-        <div className="max-w-lg mx-auto flex justify-around px-3 py-3">
+        <div className="flex justify-around w-full px-2 py-2">
           {navItems.map(({ to, icon, label, ...rest }) => (
             <NavLink
               key={to}

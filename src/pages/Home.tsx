@@ -87,7 +87,7 @@ export default function Home() {
       )}
 
       {isConnected && myGroups.length === 0 && (
-        <div className="nq-surface-pad text-center">
+        <div className="nq-surface-pad">
           <p className="nq-text text-on-card-muted mb-4">No groups yet. Create one or join via an invite link.</p>
           <Link to="/create" className="btn-secondary inline-flex items-center gap-2">
             <PlusCircle className="w-4 h-4" /> Create your first group

@@ -79,10 +79,10 @@ export default function CreateAjo() {
 
   if (!isConnected) {
     return (
-      <div className="card flex flex-col items-center justify-center py-12 text-center px-6">
-        <Wallet className="w-10 h-10 nq-green mb-4" />
+      <div className="nq-surface-pad flex flex-col items-start">
+        <Wallet className="nq-green mb-4" style={{ width: '4rem', height: '4rem' }} />
         <h2 className="nq-h2 mb-2">Connect your wallet</h2>
-        <p className="nq-text text-on-card-muted mb-6 max-w-xs">You need a Nimiq wallet to create an ajo group.</p>
+        <p className="nq-text text-on-card-muted mb-6">You need a Nimiq wallet to create an ajo group.</p>
         {connectError && <div className="nq-notice error mb-4 w-full"><p className="nq-text">{connectError}</p></div>}
         <button onClick={connect} disabled={connecting} className="btn-primary">
           {connecting ? 'Connecting…' : 'Connect Wallet'}
