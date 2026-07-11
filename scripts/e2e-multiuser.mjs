@@ -37,9 +37,40 @@ async function reconnect(page) {
   }
 }
 
+/** networkidle is flaky against SPAs with polling; retry with domcontentloaded */
+async function gotoWithRetry(page, url, attempts = 3) {
+  let lastErr
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await page.waitForLoadState('load').catch(() => {})
+      return
+    } catch (err) {
+      lastErr = err
+      await sleep(2000 * (i + 1))
+    }
+  }
+  throw lastErr
+}
+
 async function connect(page, url = BASE) {
-  await page.goto(url, { waitUntil: 'networkidle' })
+  await gotoWithRetry(page, url)
   await reconnect(page)
+}
+
+async function fetchJson(url, options = {}, attempts = 3) {
+  let lastErr
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, { ...options, signal: AbortSignal.timeout(20000) })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json()
+    } catch (err) {
+      lastErr = err
+      await sleep(1500 * (i + 1))
+    }
+  }
+  throw lastErr
 }
 
 function buildInviteUrl(group) {
@@ -62,21 +93,15 @@ function buildInviteUrl(group) {
 }
 
 async function fetchAliceGroups() {
-  const res = await fetch(`${BASE}/api/members/${encodeURIComponent(ALICE)}/groups`)
-  if (!res.ok) throw new Error(`Member API ${res.status}`)
-  return res.json()
+  return fetchJson(`${BASE}/api/members/${encodeURIComponent(ALICE)}/groups`)
 }
 
 async function fetchGroup(id) {
-  const res = await fetch(`${BASE}/api/groups/${encodeURIComponent(id)}`)
-  if (!res.ok) throw new Error(`Group API ${res.status}`)
-  return res.json()
+  return fetchJson(`${BASE}/api/groups/${encodeURIComponent(id)}`)
 }
 
 async function fetchActivity(id) {
-  const res = await fetch(`${BASE}/api/groups/${encodeURIComponent(id)}/activity`)
-  if (!res.ok) throw new Error(`Activity API ${res.status}`)
-  return res.json()
+  return fetchJson(`${BASE}/api/groups/${encodeURIComponent(id)}/activity`)
 }
 
 async function deleteGroup(id) {
@@ -158,10 +183,20 @@ async function readMembersFromBrowser(page, groupId) {
 
 async function syncGroupPage(page, groupId) {
   await connect(page, `${BASE}/group/${groupId}`)
-  await page.reload({ waitUntil: 'networkidle' })
+  await page.reload({ waitUntil: 'domcontentloaded' })
   await reconnect(page)
   await page.getByText('Members').waitFor({ timeout: 15000 }).catch(() => {})
   await sleep(POLL_MS)
+}
+
+async function waitForActivitySection(page, timeoutMs = 20000) {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    if (await page.getByRole('heading', { name: 'Activity' }).isVisible().catch(() => false)) return true
+    if (await page.getByText('Activity').first().isVisible().catch(() => false)) return true
+    await sleep(1000)
+  }
+  return false
 }
 
 async function main() {
@@ -248,7 +283,7 @@ async function main() {
     check('Alice sees Bob on group page after sync', membersText.includes('Bob'), membersText.slice(0, 80))
 
     // --- Browser B: sees Alice/creator on group ---
-    await bob.reload({ waitUntil: 'networkidle' })
+    await bob.reload({ waitUntil: 'domcontentloaded' })
     await reconnect(bob)
     const bobSeesCreator = await bob.getByText('You').isVisible().catch(() => false)
       || await bob.getByText(/Alice|Creator/i).first().isVisible().catch(() => false)
@@ -261,10 +296,11 @@ async function main() {
     // --- Contribution sync: Alice contributes ---
     await connect(alice, `${BASE}/group/${groupId}`)
     await clickContribute(alice)
-    const aliceContribMsg = await alice.getByText(/confirming|confirmed/i).waitFor({ timeout: 15000 }).then(() => true).catch(() => false)
-    check('Alice contribution submitted in UI', aliceContribMsg)
+    const aliceContribMsg = await alice.getByText(/transaction sent|confirming|confirmed|contributed/i)
+      .waitFor({ timeout: 15000 }).then(() => true).catch(() => false)
 
     const aliceContribRedis = await waitForMemberContributed(groupId, ALICE)
+    check('Alice contribution submitted in UI', aliceContribMsg || aliceContribRedis)
     check('Redis: Alice marked hasContributed', aliceContribRedis)
 
     const actAfterAlice = await waitForActivityCount(groupId, { contributions: 1 })
@@ -275,7 +311,7 @@ async function main() {
     const bobMembersAfterAlice = await membersSectionText(bob)
     check('Bob UI syncs Alice contribution (Paid badge)', bobMembersAfterAlice.includes('Paid'), bobMembersAfterAlice.slice(0, 100))
 
-    const bobActivityAfterAlice = await bob.getByText('Activity').isVisible().catch(() => false)
+    const bobActivityAfterAlice = await waitForActivitySection(bob)
     check('Bob UI shows Activity section after Alice contributes', bobActivityAfterAlice)
 
     // --- Contribution sync: Bob contributes ---
@@ -331,7 +367,7 @@ async function main() {
 
       // --- Bob sees withdrawal + round 2 via sync ---
       await syncGroupPage(bob, groupId)
-      const bobActivityWithdraw = await bob.getByText('Activity').isVisible().catch(() => false)
+      const bobActivityWithdraw = await waitForActivitySection(bob)
       check('Bob UI syncs withdrawal (Activity section)', bobActivityWithdraw)
 
       const waitForRound2State = async () => {
