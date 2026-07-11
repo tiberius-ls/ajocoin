@@ -92,7 +92,7 @@ export default function GroupDetail() {
     if (result.success) {
       setMessage(
         result.pending
-          ? 'Transaction sent — confirming on the Nimiq chain…'
+          ? 'Transaction sent — confirming on the Nimiq chain (usually within 30 seconds)…'
           : 'Contribution confirmed!'
       )
     } else {
@@ -221,20 +221,18 @@ export default function GroupDetail() {
       )}
 
       {isMember && recipient && group.status === 'active' && (
-        <div className={`card-compact flex items-center justify-between gap-4 ${
-          isRecipient ? 'card-highlight-gold' : ''
-        }`}>
+        <div className={`recipient-card${isRecipient ? ' your-turn' : ''}`}>
           <div>
             <p className="stat-label">Current recipient</p>
-            <p className="nq-text font-semibold text-on-card">{recipient.name}</p>
+            <p className="recipient-name">{recipient.name}</p>
             {!allContributed && (
-              <p className="nq-text-s text-on-card-muted mt-0.5">
+              <p className="recipient-meta mt-1">
                 {group.members.filter(m => m.hasContributed).length}/{group.members.length} contributed
               </p>
             )}
           </div>
           {isRecipient && (
-            <span className="badge-gold shrink-0">
+            <span className="badge-turn">
               {allContributed ? 'Your turn!' : 'Your turn (pending)'}
             </span>
           )}
@@ -401,7 +399,7 @@ export default function GroupDetail() {
                   && c.round === group.currentRound
                   && isPendingContribution(c)
                 ) ? (
-                  <span className="nq-text-s nq-orange flex items-center gap-1"><Clock className="w-3 h-3" /> Confirming</span>
+                  <span className="nq-text-s nq-orange flex items-center gap-1" title="Usually confirms within 30 seconds"><Clock className="w-3 h-3" /> Confirming</span>
                 ) : (
                   <span className="nq-text-s text-on-card-muted flex items-center gap-1"><Clock className="w-3 h-3" /> Pending</span>
                 )}
