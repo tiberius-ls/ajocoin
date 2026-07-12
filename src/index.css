@@ -201,17 +201,48 @@
     background: var(--nimiq-green);
   }
 
-  .stat-tile {
-    @apply card-compact;
-  }
-
-  .stat-label {
-    @apply nq-label text-on-card-muted block;
+  /* Readable labels + values on white cards (never tint + same-hue text) */
+  .info-label {
+    @apply nq-label block;
+    color: rgba(31, 35, 72, 0.55);
     margin-bottom: 0.5rem;
   }
 
+  .info-value {
+    @apply nq-h3;
+    color: var(--nimiq-blue);
+  }
+
+  .info-value-lg {
+    @apply nq-h2;
+    color: var(--nimiq-blue);
+  }
+
+  .info-meta {
+    @apply nq-text-s;
+    color: rgba(31, 35, 72, 0.6);
+  }
+
+  .stat-tile {
+    @apply card-compact;
+    background: #fff;
+    border: 1px solid rgba(31, 35, 72, 0.1);
+  }
+
+  .stat-label {
+    @apply info-label;
+  }
+
   .stat-value {
-    @apply nq-h3 text-on-card;
+    @apply info-value;
+  }
+
+  .stat-value.accent-gold {
+    color: #a87200;
+  }
+
+  .stat-value.accent-green {
+    color: #0d8f7c;
   }
 
   .card-inset {
@@ -221,60 +252,93 @@
     text-align: center;
   }
 
-  .card-highlight-green {
-    background: rgba(33, 188, 165, 0.08);
-    border: 1px solid rgba(33, 188, 165, 0.2);
-  }
-
-  .card-highlight-gold {
-    background: #fff;
-    border: 2px solid var(--nimiq-gold);
-    box-shadow: 0 0.5rem 2rem rgba(233, 178, 19, 0.2);
-  }
-
-  .recipient-card {
-    @apply card-compact flex items-center justify-between gap-4;
+  .info-card {
+    @apply card-compact;
     background: #fff;
     border: 1px solid rgba(31, 35, 72, 0.12);
   }
 
-  .recipient-card.your-turn {
-    border: 2px solid var(--nimiq-gold);
-    box-shadow: 0 0.5rem 2rem rgba(233, 178, 19, 0.18);
+  .info-card.accent-green {
+    border: 2px solid var(--nimiq-green);
+    box-shadow: 0 0.5rem 2rem rgba(33, 188, 165, 0.14);
   }
 
-  .recipient-card .recipient-name {
-    @apply nq-h3;
+  .info-card.accent-gold {
+    border: 2px solid var(--nimiq-gold);
+    box-shadow: 0 0.5rem 2rem rgba(233, 178, 19, 0.16);
+  }
+
+  .recipient-card {
+    @apply info-card flex items-center justify-between gap-4;
+  }
+
+  .recipient-card.your-turn {
+    @apply accent-gold;
+  }
+
+  .savings-card {
+    @apply info-card accent-green;
+  }
+
+  .recipient-card .recipient-name,
+  .savings-card .info-value-lg {
     color: var(--nimiq-blue);
   }
 
   .recipient-card .recipient-meta {
-    @apply nq-text-s;
-    color: rgba(31, 35, 72, 0.6);
+    @apply info-meta;
   }
 
-  .badge-turn {
-    @apply nq-text-s font-semibold shrink-0 rounded-full;
+  .badge-pill {
+    @apply nq-text-s font-semibold inline-flex items-center gap-1 shrink-0 rounded-full;
     padding: 0.5rem 1.25rem;
-    background: var(--nimiq-gold);
     color: var(--nimiq-blue);
   }
 
-  .badge {
-    @apply nq-text-s inline-flex items-center rounded-full;
-    padding: 0.5rem 1.25rem;
+  .badge-pill.gold {
+    background: var(--nimiq-gold);
   }
 
-  .badge-green {
-    @apply badge;
-    background: rgba(33, 188, 165, 0.12);
-    color: var(--nimiq-green);
+  .badge-pill.green {
+    background: var(--nimiq-green);
   }
 
-  .badge-gold {
-    @apply badge;
-    background: rgba(233, 178, 19, 0.14);
-    color: var(--nimiq-gold);
+  .badge-pill.orange {
+    background: var(--nimiq-orange);
+    color: #fff;
+  }
+
+  .badge-pill.muted {
+    background: rgba(31, 35, 72, 0.08);
+    color: rgba(31, 35, 72, 0.65);
+  }
+
+  .badge-pill.blue {
+    background: rgba(31, 35, 72, 0.1);
+    color: var(--nimiq-blue);
+  }
+
+  .badge-round {
+    @apply badge-pill green;
+  }
+
+  .badge-round.done {
+    @apply muted;
+  }
+
+  .member-tag {
+    @apply nq-text-s font-semibold;
+    color: #a87200;
+  }
+
+  .member-tag.line {
+    color: #0d8f7c;
+  }
+
+  .list-row {
+    @apply card-compact flex items-center justify-between gap-3;
+    background: #fff;
+    border: 1px solid rgba(31, 35, 72, 0.1);
   }
 
   .vote-option {

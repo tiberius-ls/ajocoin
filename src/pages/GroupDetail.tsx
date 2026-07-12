@@ -60,7 +60,7 @@ export default function GroupDetail() {
 
   if (!group) {
     return (
-      <div className="text-center py-20">
+      <div className="py-16">
         <p className="nq-text text-on-blue-muted mb-4">Group not found</p>
         <Link to="/dashboard" className="nq-link nq-text-s">← Back to groups</Link>
       </div>
@@ -187,9 +187,7 @@ export default function GroupDetail() {
           <h2 className="nq-h1 text-on-blue">{group.name}</h2>
           <p className="nq-text text-on-blue-muted mt-1">{group.description}</p>
         </div>
-        <span className={`nq-label shrink-0 px-2 py-0.5 rounded-full ${
-          group.status === 'completed' ? 'nq-gray-bg text-on-card-muted' : 'nq-green-bg nq-green'
-        }`}>
+        <span className={`badge-round${group.status === 'completed' ? ' done' : ''}`}>
           {group.status === 'completed' ? 'Done' : `Round ${group.currentRound}`}
         </span>
       </div>
@@ -197,7 +195,7 @@ export default function GroupDetail() {
       <div className="grid grid-cols-2 gap-2">
         <div className="stat-tile">
           <p className="stat-label">{flexible ? 'Savings range' : 'Per cycle'}</p>
-          <p className="stat-value nq-gold">{formatSavingsLabel(group)}</p>
+          <p className="stat-value accent-gold">{formatSavingsLabel(group)}</p>
         </div>
         <div className="stat-tile">
           <p className="stat-label">Cycle</p>
@@ -209,14 +207,14 @@ export default function GroupDetail() {
         </div>
         <div className="stat-tile">
           <p className="stat-label">Treasury</p>
-          <p className="stat-value nq-green">{formatNim(treasuryBalance)}</p>
+          <p className="stat-value accent-green">{formatNim(treasuryBalance)}</p>
         </div>
       </div>
 
       {isMember && currentMember && (
-        <div className="card-compact card-highlight-green">
-          <p className="stat-label">Your savings per cycle</p>
-          <p className="nq-h2 nq-green">{formatNim(myAmount)}</p>
+        <div className="savings-card">
+          <p className="info-label">Your savings per cycle</p>
+          <p className="info-value-lg">{formatNim(myAmount)}</p>
         </div>
       )}
 
@@ -232,7 +230,7 @@ export default function GroupDetail() {
             )}
           </div>
           {isRecipient && (
-            <span className="badge-turn">
+            <span className="badge-pill gold">
               {allContributed ? 'Your turn!' : 'Your turn (pending)'}
             </span>
           )}
@@ -252,7 +250,7 @@ export default function GroupDetail() {
           </button>
         </div>
       )}
-      {shareStatus && <p className="text-xs text-nimiq-green text-center">{shareStatus}</p>}
+      {shareStatus && <p className="nq-text-s nq-green">{shareStatus}</p>}
 
       {isMember && currentMember && !currentMember.hasContributed && group.status === 'active' && (
         <button onClick={handleContribute} disabled={contributing} className="btn-gold w-full flex items-center justify-center gap-2">
@@ -274,8 +272,8 @@ export default function GroupDetail() {
         <div className="nq-notice warning flex items-start gap-3">
           <NimiqIcon name="alert-triangle" style={{ width: '1.75rem', height: '1.75rem', flexShrink: 0 }} />
           <div>
-            <p className="nq-label nq-gold">It's your turn to receive!</p>
-            <p className="nq-text">
+            <p className="info-label" style={{ color: 'var(--nimiq-blue)' }}>It's your turn to receive!</p>
+            <p className="nq-text" style={{ color: 'var(--nimiq-blue)' }}>
               {formatNim(payoutAmount)} is ready. The treasurer will release the payout to your wallet.
             </p>
           </div>
@@ -371,17 +369,17 @@ export default function GroupDetail() {
         <h3 className="nq-label text-on-blue mb-3">Members</h3>
         <div className="space-y-2">
           {group.members.map((member, idx) => (
-            <div key={member.address} className="card-compact flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div key={member.address} className="list-row">
+              <div className="flex items-center gap-3 min-w-0">
                 <Identicon seed={member.address} size={32} />
-                <div>
+                <div className="min-w-0">
                   <p className="nq-text font-semibold text-on-card">
                     {member.name}
                     {member.address === group.creatorAddress && (
-                      <span className="nq-text-s nq-gold ml-1.5">Creator</span>
+                      <span className="member-tag ml-1.5">Creator</span>
                     )}
                     {recipient?.address === member.address && !member.hasReceived && group.status === 'active' && (
-                      <span className="text-[10px] text-nimiq-green ml-1.5">#{idx + 1} in line</span>
+                      <span className="member-tag line ml-1.5">#{idx + 1} in line</span>
                     )}
                   </p>
                   <p className="nq-text-s mono-address text-on-card-muted">
@@ -389,19 +387,19 @@ export default function GroupDetail() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center shrink-0">
                 {member.hasReceived ? (
-                  <span className="nq-text-s nq-gold">Received</span>
+                  <span className="badge-pill gold">Received</span>
                 ) : member.hasContributed ? (
-                  <span className="nq-text-s nq-green flex items-center gap-1"><Check className="w-3 h-3" /> Paid</span>
+                  <span className="badge-pill green"><Check style={{ width: '1.25rem', height: '1.25rem' }} /> Paid</span>
                 ) : groupContributions.some(c =>
                   c.memberAddress === member.address
                   && c.round === group.currentRound
                   && isPendingContribution(c)
                 ) ? (
-                  <span className="nq-text-s nq-orange flex items-center gap-1" title="Usually confirms within 30 seconds"><Clock className="w-3 h-3" /> Confirming</span>
+                  <span className="badge-pill orange" title="Usually confirms within 30 seconds"><Clock style={{ width: '1.25rem', height: '1.25rem' }} /> Confirming</span>
                 ) : (
-                  <span className="nq-text-s text-on-card-muted flex items-center gap-1"><Clock className="w-3 h-3" /> Pending</span>
+                  <span className="badge-pill muted"><Clock style={{ width: '1.25rem', height: '1.25rem' }} /> Pending</span>
                 )}
               </div>
             </div>
@@ -421,9 +419,9 @@ export default function GroupDetail() {
                 const contrib = !isWithdrawal ? item as typeof groupContributions[0] : null
                 const pending = contrib && isPendingContribution(contrib)
                 return (
-                  <div key={item.id} className="card-compact flex items-center justify-between">
-                    <div>
-                      <p className={`nq-text font-semibold ${isWithdrawal ? 'nq-gold' : 'nq-green'}`}>
+                  <div key={item.id} className="list-row">
+                    <div className="min-w-0">
+                      <p className="nq-text font-semibold text-on-card">
                         {isWithdrawal ? '−' : '+'} {formatNim(item.amount)}
                       </p>
                       <p className="nq-text-s text-on-card-muted">
@@ -437,13 +435,13 @@ export default function GroupDetail() {
                         </p>
                       )}
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       {!isWithdrawal && (
-                        <span className={`nq-label ${pending ? 'nq-orange' : 'nq-green'}`}>
+                        <span className={`badge-pill ${pending ? 'orange' : 'green'}`}>
                           {contrib ? contributionStatusLabel(contrib) : 'Confirmed'}
                         </span>
                       )}
-                      <p className="nq-text-s text-on-card-muted mt-0.5">{formatDate(item.timestamp)}</p>
+                      <p className="nq-text-s text-on-card-muted mt-1">{formatDate(item.timestamp)}</p>
                     </div>
                   </div>
                 )

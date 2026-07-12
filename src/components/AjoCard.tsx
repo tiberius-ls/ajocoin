@@ -21,9 +21,7 @@ export default function AjoCard({ group }: AjoCardProps) {
           <h3 className="nq-h3 group-hover:nq-green transition-colors">{group.name}</h3>
           <p className="nq-text-s text-on-card-muted mt-0.5 line-clamp-1">{group.description}</p>
         </div>
-        <span className={`nq-text-s uppercase px-2 py-0.5 rounded-full ${
-          group.status === 'active' ? 'nq-green-bg nq-green' : 'nq-gray-bg text-on-card-muted'
-        }`}>
+        <span className={`badge-pill ${group.status === 'active' ? 'green' : 'muted'}`}>
           {group.status}
         </span>
       </div>
