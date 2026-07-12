@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import { AjoProvider } from './context/AjoContext'
 import Layout from './components/Layout'
 import Home from './pages/Home'
@@ -25,6 +26,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      <Analytics />
     </AjoProvider>
   )
 }
