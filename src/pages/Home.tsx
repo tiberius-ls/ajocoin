@@ -4,6 +4,7 @@ import { PlusCircle, Shield, Users, Zap, ArrowRight } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import AjoCard from '../components/AjoCard'
 import NimiqIcon from '../components/nimiq/NimiqIcon'
+import { formatNim } from '../lib/utils'
 
 const features = [
   { icon: Users, title: 'Group Savings', desc: 'Create ajo circles with trusted members' },
@@ -12,7 +13,7 @@ const features = [
 ]
 
 export default function Home() {
-  const { isConnected, connecting, connect, connectError, myGroups } = useAjo()
+  const { isConnected, connecting, connect, connectError, myGroups, walletBalance } = useAjo()
 
   return (
     <div className="page">
@@ -40,11 +41,19 @@ export default function Home() {
               <p className="nq-text-s text-on-card-muted">Open in Nimiq Pay to use your wallet</p>
             </div>
           ) : (
-            <Link to="/create" className="btn-primary inline-flex items-center gap-2">
-              <PlusCircle className="w-4 h-4" />
-              Create New Ajo
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            <div className="space-y-4">
+              <div className="wallet-balance-card">
+                <p className="info-label">Wallet balance</p>
+                <p className="info-value-lg">
+                  {walletBalance === null ? '…' : formatNim(walletBalance)}
+                </p>
+              </div>
+              <Link to="/create" className="btn-primary inline-flex items-center gap-2">
+                <PlusCircle className="w-4 h-4" />
+                Create New Ajo
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           )}
         </div>
       </motion.section>

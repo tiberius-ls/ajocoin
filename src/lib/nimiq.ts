@@ -78,6 +78,41 @@ export function getProvider(): NimiqProvider | null {
   return provider
 }
 
+const RPC_URL = 'https://rpc.nimiq.network'
+
+export async function fetchWalletBalance(address: string): Promise<number | null> {
+  const normalized = address.replace(/\s/g, '')
+
+  try {
+    const rpc = provider?.getRPC()
+    if (rpc) {
+      const luna = await rpc.call<number>({
+        jsonrpc: '2.0',
+        method: 'getBalance',
+        params: [normalized],
+      })
+      if (typeof luna === 'number') return luna / 1e5
+    }
+  } catch {
+    // Fall through to public RPC
+  }
+
+  try {
+    const res = await fetch(RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'getBalance', params: [normalized], id: 1 }),
+    })
+    if (!res.ok) return null
+    const json = await res.json() as { result?: number }
+    if (typeof json.result === 'number') return json.result / 1e5
+  } catch {
+    return null
+  }
+
+  return null
+}
+
 export function disconnectWallet(): void {
   provider?.disconnect()
   provider = null

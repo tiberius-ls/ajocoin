@@ -4,18 +4,22 @@ import { Users } from 'lucide-react'
 import { useAjo } from '../context/AjoContext'
 import AjoCard from '../components/AjoCard'
 import EmptyState from '../components/EmptyState'
-import { formatNim } from '../lib/utils'
+import { formatNim, isConfirmedContribution, normalizeAddress } from '../lib/utils'
 import NimiqIcon from '../components/nimiq/NimiqIcon'
 
 export default function Dashboard() {
   const { isConnected, connecting, connect, connectError, myGroups, contributions, withdrawals, wallet } = useAjo()
 
+  const myAddress = wallet.address!
   const totalContributed = contributions
-    .filter(c => c.memberAddress === wallet.address)
+    .filter(c =>
+      normalizeAddress(c.memberAddress) === normalizeAddress(myAddress)
+      && isConfirmedContribution(c)
+    )
     .reduce((sum, c) => sum + c.amount, 0)
 
   const totalWithdrawn = withdrawals
-    .filter(w => w.memberAddress === wallet.address)
+    .filter(w => normalizeAddress(w.memberAddress) === normalizeAddress(myAddress))
     .reduce((sum, w) => sum + w.amount, 0)
 
   if (!isConnected) {
@@ -45,9 +49,9 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Groups', value: String(myGroups.length) },
-          { label: 'Contributed', value: formatNim(totalContributed) },
-          { label: 'Withdrawn', value: formatNim(totalWithdrawn) },
+          { label: 'Groups', value: String(myGroups.length), accent: '' },
+          { label: 'Contributed', value: formatNim(totalContributed), accent: 'accent-green' },
+          { label: 'Withdrawn', value: formatNim(totalWithdrawn), accent: 'accent-gold' },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -56,8 +60,8 @@ export default function Dashboard() {
             transition={{ delay: i * 0.05 }}
             className="stat-tile"
           >
-            <p className="nq-h2 nq-green">{stat.value}</p>
             <p className="stat-label">{stat.label}</p>
+            <p className={`stat-value${stat.accent ? ` ${stat.accent}` : ''}`}>{stat.value}</p>
           </motion.div>
         ))}
       </div>

@@ -10,7 +10,7 @@ import {
   retryConfirmContribution, startSharedStorePolling, stopSharedStorePolling,
   onSharedStoreUpdate, pullGroupFromServer,
 } from '../lib/storage'
-import { connectWallet, sendTransaction, disconnectWallet, type WalletState } from '../lib/nimiq'
+import { connectWallet, sendTransaction, disconnectWallet, fetchWalletBalance, type WalletState } from '../lib/nimiq'
 import {
   generateId, getTreasuryBalance, getCurrentRecipient,
   allMembersContributed, vestingProgress, daysBetween, getRoundPayout,
@@ -19,6 +19,7 @@ import {
 
 interface AjoContextValue {
   wallet: WalletState
+  walletBalance: number | null
   connecting: boolean
   connectError: string | null
   connect: () => Promise<void>
@@ -93,6 +94,7 @@ function createTurnAlert(
 
 export function AjoProvider({ children }: { children: ReactNode }) {
   const [wallet, setWallet] = useState<WalletState>(defaultWallet)
+  const [walletBalance, setWalletBalance] = useState<number | null>(null)
   const [connecting, setConnecting] = useState(false)
   const [connectError, setConnectError] = useState<string | null>(null)
   const [groups, setGroups] = useState<AjoGroup[]>([])
@@ -117,6 +119,15 @@ export function AjoProvider({ children }: { children: ReactNode }) {
   const refreshAlerts = useCallback(() => {
     setAlerts(loadGlobalAlerts())
   }, [])
+
+  const refreshWalletBalance = useCallback(async () => {
+    if (!wallet.address) {
+      setWalletBalance(null)
+      return
+    }
+    const balance = await fetchWalletBalance(wallet.address)
+    setWalletBalance(balance)
+  }, [wallet.address])
 
   const mergeGroupsFromRegistry = useCallback((userGroups: AjoGroup[], address: string) => {
     const registry = loadRegistry()
@@ -290,13 +301,26 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(timer)
   }, [wallet.address, groups, refreshFromSharedStore, syncActivityFromCache, maybeNotifyAllContributed])
 
+  useEffect(() => {
+    if (!wallet.address) {
+      setWalletBalance(null)
+      return
+    }
+    void refreshWalletBalance()
+    const timer = setInterval(() => void refreshWalletBalance(), 15000)
+    return () => clearInterval(timer)
+  }, [wallet.address, refreshWalletBalance])
+
   const connect = useCallback(async () => {
     setConnecting(true)
     setConnectError(null)
     try {
       const result = await connectWallet()
       setWallet(result)
-      if (result.address) loadUserState(result.address)
+      if (result.address) {
+        loadUserState(result.address)
+        void fetchWalletBalance(result.address).then(setWalletBalance)
+      }
     } catch (err) {
       setConnectError(err instanceof Error ? err.message : 'Failed to connect wallet')
       setWallet(defaultWallet)
@@ -309,6 +333,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
   const disconnect = useCallback(() => {
     disconnectWallet()
     setWallet(defaultWallet)
+    setWalletBalance(null)
     setConnectError(null)
     clearState()
   }, [clearState])
@@ -476,6 +501,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     const amount = getMemberAmount(group, member)
     const result = await sendTransaction(group.treasuryAddress, amount)
     if (!result.success) return { success: false, error: result.error }
+    void refreshWalletBalance()
 
     const contribution: Contribution = {
       id: generateId(),
@@ -519,7 +545,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     maybeNotifyAllContributed(updated)
 
     return { success: true }
-  }, [wallet.address, groups, refreshFromSharedStore, syncActivityFromCache, maybeNotifyAllContributed])
+  }, [wallet.address, groups, refreshFromSharedStore, syncActivityFromCache, maybeNotifyAllContributed, refreshWalletBalance])
 
   const withdrawPayout = useCallback(async (groupId: string) => {
     if (!wallet.address) return { success: false, error: 'Connect your wallet first' }
@@ -549,6 +575,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     const firstChunk = Math.min(payoutAmount, payoutAmount * 0.25)
     const result = await sendTransaction(recipient.address, firstChunk)
     if (!result.success) return { success: false, error: result.error }
+    void refreshWalletBalance()
 
     const vestingSchedule = createVestingForPayout(group, recipient, payoutAmount, firstChunk)
     setVesting(prev => [...prev, vestingSchedule])
@@ -618,7 +645,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     }
 
     return { success: true, nextRecipient: nextRecipientName, releasedAmount: firstChunk }
-  }, [wallet.address, groups, refreshAlerts, getGroupContributions, getGroupWithdrawals, createVestingForPayout])
+  }, [wallet.address, groups, refreshAlerts, getGroupContributions, getGroupWithdrawals, createVestingForPayout, refreshWalletBalance])
 
   const withdrawVested = useCallback(async (vestingId: string) => {
     if (!wallet.address) return { success: false, error: 'Connect your wallet first' }
@@ -651,6 +678,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     const payee = schedule.memberAddress
     const result = await sendTransaction(payee, chunk)
     if (!result.success) return { success: false, error: result.error }
+    void refreshWalletBalance()
 
     setVesting(prev => prev.map(v =>
       v.id === vestingId ? { ...v, releasedAmount: v.releasedAmount + chunk } : v
@@ -673,7 +701,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
     setWithdrawals(prev => [...prev, withdrawal])
 
     return { success: true }
-  }, [wallet.address, vesting, groups])
+  }, [wallet.address, vesting, groups, refreshWalletBalance])
 
   const deleteGroup = useCallback((groupId: string): { success: boolean; error?: string } => {
     if (!wallet.address) return { success: false, error: 'Connect your wallet first' }
@@ -756,7 +784,7 @@ export function AjoProvider({ children }: { children: ReactNode }) {
 
   return (
     <AjoContext.Provider value={{
-      wallet, connecting, connectError, connect, disconnect, isConnected,
+      wallet, walletBalance, connecting, connectError, connect, disconnect, isConnected,
       myGroups, myAlerts, votes, vesting, contributions, withdrawals,
       createGroup, addMember, joinGroup, joinFromInvite, getInviteLink,
       contribute, withdrawPayout, withdrawVested, deleteGroup, dismissAlert,

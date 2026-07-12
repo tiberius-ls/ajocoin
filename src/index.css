@@ -280,6 +280,10 @@
     @apply info-card accent-green;
   }
 
+  .wallet-balance-card {
+    @apply info-card accent-gold;
+  }
+
   .recipient-card .recipient-name,
   .savings-card .info-value-lg {
     color: var(--nimiq-blue);

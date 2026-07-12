@@ -20,6 +20,10 @@ export function shortenAddress(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`
 }
 
+export function normalizeAddress(address: string): string {
+  return address.replace(/\s/g, '').toUpperCase()
+}
+
 export function formatDate(date: string): string {
   return new Date(date).toLocaleDateString(undefined, {
     month: 'short',
